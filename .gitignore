@@ -1,0 +1,22 @@
+# Workspace clones of the LeapWell code repos (managed by /lw-setup)
+/repos/
+
+# Local / secret config — never commit
+.env
+.env.*
+!.env.example
+env*.json
+!env.example.json
+*.jks
+*.keystore
+key.properties
+google-services.json
+GoogleService-Info.plist
+.claude/settings.local.json
+
+# Build / tool output
+__pycache__/
+*.pyc
+dist/
+.DS_Store
+.superpowers/
