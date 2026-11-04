@@ -77,6 +77,9 @@ while read -r key name branch; do
   git -C "$dir" config core.hooksPath "$ROOT/.githooks"
 done <<< "$rows"
 
+# leapwell's own commits go through the same hooks (the chain skips its own .githooks).
+git -C "$ROOT" config core.hooksPath "$ROOT/.githooks"
+
 echo
 echo "== tools"
 doctor_args=()
