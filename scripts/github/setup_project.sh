@@ -25,8 +25,10 @@ banner
 # Read-only lookup; skipped in dry-run so no gh call is made there.
 field_exists() {
   [ "$APPLY" -eq 1 ] || return 1
-  gh project field-list "$PROJECT" --owner "$OWNER" --format json \
-    --jq ".fields[] | select(.name==\"$1\") | .name" | grep -qx "$1"
+  local names
+  names="$(gh project field-list "$PROJECT" --owner "$OWNER" --format json \
+    --jq ".fields[] | .name")"
+  printf '%s\n' "$names" | grep -Fx -- "$1" >/dev/null
 }
 
 ensure_select_field() {

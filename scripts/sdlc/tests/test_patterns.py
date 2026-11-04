@@ -179,7 +179,7 @@ class TestContractTables(unittest.TestCase):
     def test_type_labels(self):
         self.assertEqual(
             TYPE_LABELS,
-            {"bug": "bug", "enhancement": "feature", "chore": "task", "release": "release"},
+            {"type:bug": "bug", "type:feature": "feature", "type:task": "task", "type:release": "release"},
         )
 
 

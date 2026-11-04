@@ -37,8 +37,9 @@ if [ "${#pages[@]}" -eq 0 ]; then
   exit 1
 fi
 
-if ! git ls-remote "$WIKI_URL" >/dev/null 2>&1; then
-  echo "The wiki repo does not exist yet ($WIKI_URL)."
+if ! remote_err="$(git ls-remote "$WIKI_URL" 2>&1 >/dev/null)"; then
+  echo "The wiki repo does not exist yet or is not accessible ($WIKI_URL)."
+  echo "git said: $remote_err"
   echo "Create the first wiki page in the UI (Wiki -> Create the first page), then re-run"
   [ "$APPLY" -eq 1 ] && exit 1
   exit 0

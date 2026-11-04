@@ -77,7 +77,7 @@ class AdminScriptsTest(unittest.TestCase):
 
     def test_labels_dry_run_covers_every_label(self):
         out = self.run_script("sync_labels.sh").stdout
-        self.assertIn("[dry-run] gh label create bug --color d73a4a", out)
+        self.assertIn("[dry-run] gh label create type:bug --color d73a4a", out)
         self.assertIn("--force", out)
         self.assertIn("good\\ first\\ issue", out)
         self.assertIn("status:routed", out)
@@ -105,7 +105,7 @@ class AdminScriptsTest(unittest.TestCase):
 
     def test_protection_values(self):
         out = self.run_script("protect_branches.sh").stdout
-        for check in ["sdlc-scripts", "secret-scan", "mockup-scan"]:
+        for check in ["pr-check", "sdlc-scripts", "secret-scan", "mockup-scan"]:
             self.assertIn(f'"{check}"', out)
         self.assertIn("repos/Medtronic-LABS/leapwell/branches/main/protection", out)
         self.assertNotIn("develop", out)
@@ -184,6 +184,8 @@ class WikiAndPackageTest(unittest.TestCase):
         env = dict(WIKI_SOURCE_DIR=self.wiki_source(), WIKI_URL=str(self.base / "missing.git"))
         dry = self.run_script("publish_wiki.sh", **env)
         self.assertEqual(dry.returncode, 0, dry.stderr)
+        self.assertIn("does not exist yet or is not accessible", dry.stdout)
+        self.assertIn("git said:", dry.stdout)
         self.assertIn("Create the first wiki page in the UI (Wiki -> Create the first page), then re-run", dry.stdout)
         applied = self.run_script("publish_wiki.sh", "--apply", **env)
         self.assertEqual(applied.returncode, 1)

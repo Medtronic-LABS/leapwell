@@ -1,7 +1,7 @@
 name: Task
 description: Chore, refactor, tech debt or internal work
 title: "[Task] "
-labels: ["type:task", "chore"]
+labels: ["type:task"]
 body:
   - type: markdown
     attributes:

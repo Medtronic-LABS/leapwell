@@ -1,17 +1,11 @@
 # Source of truth for repo labels; applied by scripts/github/sync_labels.sh (dry-run by default).
 # Every repo key in repos.json must have an area:<key> label (enforced by test_github_config).
-- name: bug
-  color: "d73a4a"
-  description: "Something isn't working"
 - name: documentation
   color: "0075ca"
   description: "Improvements or additions to documentation"
 - name: duplicate
   color: "cfd3d7"
   description: "This issue or pull request already exists"
-- name: enhancement
-  color: "a2eeef"
-  description: "New feature or request"
 - name: good first issue
   color: "7057ff"
   description: "Good for newcomers"
@@ -33,12 +27,6 @@
 - name: tech-debt
   color: "E4E669"
   description: "Known shortcut to pay back"
-- name: chore
-  color: "C5DEF5"
-  description: "Maintenance and internal tasks"
-- name: release
-  color: "5319E7"
-  description: "Release tracking"
 - name: type:bug
   color: "d73a4a"
   description: "Bug report"

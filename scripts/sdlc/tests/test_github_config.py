@@ -42,7 +42,7 @@ class IssueFormsTest(unittest.TestCase):
     def test_forms_apply_type_label_and_title_prefix(self):
         for issue_type in REQUIRED_SECTIONS:
             text = read(f"ISSUE_TEMPLATE/{issue_type}.yml")
-            self.assertIn(f'"type:{issue_type}"', text)
+            self.assertRegex(text, rf'(?m)^labels: \["type:{issue_type}"\]$')
             self.assertIn(f'title: "[{issue_type.capitalize()}] "', text)
 
     def test_issue_forms_end_with_required_privacy_checkbox(self):
@@ -95,16 +95,18 @@ class LabelsTest(unittest.TestCase):
     def test_labels_unique_and_complete(self):
         names = label_names()
         self.assertEqual(len(names), len(set(names)))
-        required = {"bug", "documentation", "duplicate", "enhancement", "good first issue",
+        required = {"documentation", "duplicate", "good first issue",
                     "help wanted", "invalid", "question", "wontfix", "refactor", "tech-debt",
-                    "chore", "release", "prio:P0", "prio:P1", "prio:P2", "prio:P3",
+                    "prio:P0", "prio:P1", "prio:P2", "prio:P3",
                     "env:prod", "env:training", "env:dev", "status:blocked", "status:needs-design",
                     "type:bug", "type:feature", "type:task", "type:release",
                     "status:needs-info", "status:routed", "status:triage"}
         required |= {f"area:{a}" for a in (
             "auth sync db visit cdss scribe teleconsult household push release ci i18n").split()}
         self.assertLessEqual(required, set(names))
-        self.assertRegex(read("labels.yml"), r"- name: bug\n  color: \"?d73a4a")
+        for legacy in ("bug", "enhancement", "chore", "release"):
+            self.assertNotIn(legacy, names, "type:* is the only type-label contract")
+        self.assertRegex(read("labels.yml"), r"- name: type:bug\n  color: \"?d73a4a")
 
     def test_area_label_for_every_repo_key(self):
         names = set(label_names())
@@ -165,6 +167,7 @@ class WorkflowsTest(unittest.TestCase):
         self.assertIn("status:triage", text)
         self.assertIn("Repo or component (if known)", text)
         self.assertIn("don't know", text)
+        self.assertNotIn("label create", text, "labels come from labels.yml, not the workflow")
 
 
 if __name__ == "__main__":

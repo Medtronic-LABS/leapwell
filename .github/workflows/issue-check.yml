@@ -81,18 +81,13 @@ jobs:
             gh api -X DELETE "$api/issues/$ISSUE_NUMBER/labels/${NEEDS_INFO_LABEL//:/%3A}" > /dev/null 2>&1 \
               && echo "Removed $NEEDS_INFO_LABEL." || echo "$NEEDS_INFO_LABEL was not set."
           else
-            gh label create "$NEEDS_INFO_LABEL" --color FEF2C0 \
-              --description "Waiting for the reporter to complete the ticket" --force \
-              || echo "Could not create label; assuming it already exists."
-            gh api -X POST "$api/issues/$ISSUE_NUMBER/labels" -f "labels[]=$NEEDS_INFO_LABEL" > /dev/null
+            # Labels come from .github/labels.yml (sync_labels.sh); a missing label fails visibly.
+            gh issue edit "$ISSUE_NUMBER" --add-label "$NEEDS_INFO_LABEL"
             echo "Added $NEEDS_INFO_LABEL."
           fi
 
       - name: Flag bugs for triage
         if: ${{ env.NEEDS_TRIAGE == 'true' }}
         run: |
-          gh label create "$TRIAGE_LABEL" --color FBCA04 \
-            --description "Repo or component unknown; a developer routes it" --force \
-            || echo "Could not create label; assuming it already exists."
-          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/labels" -f "labels[]=$TRIAGE_LABEL" > /dev/null
+          gh issue edit "$ISSUE_NUMBER" --add-label "$TRIAGE_LABEL"
           echo "Added $TRIAGE_LABEL."

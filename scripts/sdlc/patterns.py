@@ -129,10 +129,10 @@ REQUIRED_SECTIONS: dict[str, list[str]] = {
 }
 
 TYPE_LABELS: dict[str, str] = {
-    "bug": "bug",
-    "enhancement": "feature",
-    "chore": "task",
-    "release": "release",
+    "type:bug": "bug",
+    "type:feature": "feature",
+    "type:task": "task",
+    "type:release": "release",
 }
 
 TITLE_PREFIXES: dict[str, str] = {
