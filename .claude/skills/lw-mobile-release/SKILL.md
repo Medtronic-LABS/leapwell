@@ -15,7 +15,7 @@ disable-model-invocation: true
 
    | Arg | Env file | Command | Output |
    |---|---|---|---|
-   | `dev` | `env.staging.json` (dev/staging backend) | `scripts/build_apk.sh staging --release --app-flavor prod` | `build/app/outputs/flutter-apk/app-prod-release.apk` |
+   | `dev` | `env.staging.json` (the app README calls it the staging cluster) - confirm with the team | `scripts/build_apk.sh staging --release --app-flavor prod` | `build/app/outputs/flutter-apk/app-prod-release.apk` |
    | `training` | `env.training.json` | `scripts/build_apk.sh training --release --app-flavor training` | `build/app/outputs/flutter-apk/app-training-release.apk` |
    | `playstore` | `env.production.json` + `android/key.properties` | see step 3 | `.aab` from `scripts/release.sh`, plus a release APK |
 

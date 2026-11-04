@@ -276,7 +276,7 @@ do_full_setup() {
   else
     step "Initialising bench $FRAPPE_BRANCH (5-10 min on first run)"
     docker compose exec -T backend bash -c \
-      "export PATH=\$PATH:/home/frappe/.local/bin; bench init --frappe-branch '$FRAPPE_BRANCH' --skip-redis-config-generation frappe-bench"
+      "export PATH=\$PATH:/home/frappe/.local/bin; bench init --frappe-branch '$FRAPPE_BRANCH' --python python3 --skip-redis-config-generation frappe-bench"
 
     docker compose exec -T backend bash -c "
       cat > $BENCH_HOME/sites/common_site_config.json <<CONF
