@@ -1,6 +1,7 @@
 """Structure checks for the committed Claude toolkit (.claude/ agents and skills)."""
 import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -33,7 +34,17 @@ READ_ONLY_AGENTS = {"lw-architect", "lw-reviewer", "lw-security", "lw-release", 
 WORKFLOW_SKILLS = {"lw-start", "lw-feature", "lw-fix", "lw-pr", "lw-release"}
 HUB_SKILLS = {"lw-setup", "lw-route", "lw-promote", "lw-wiki"}
 MANUAL_SKILLS = WORKFLOW_SKILLS | HUB_SKILLS
-ALL_SKILLS = MANUAL_SKILLS | {"lw-ticket"}
+AREA_STATUS_SKILLS = {"lw-frappe-status", "lw-ai-status", "lw-coaching-status"}
+AREA_ACTION_SKILLS = {
+    "lw-mobile-start", "lw-mobile-fresh-launch", "lw-mobile-e2e", "lw-mobile-release",
+    "lw-frappe-setup", "lw-frappe-start", "lw-frappe-stop",
+    "lw-ai-start", "lw-ai-stop", "lw-ai-test",
+    "lw-coaching-start", "lw-coaching-stop", "lw-coaching-android-build",
+}
+AREA_SKILLS = AREA_ACTION_SKILLS | AREA_STATUS_SKILLS
+ALL_SKILLS = MANUAL_SKILLS | AREA_SKILLS | {"lw-ticket"}
+FRAPPE_ENV = ROOT / "env" / "frappe"
+MAX_AREA_SKILL_LINES = 80
 TICKET_TYPES = ("bug", "feature", "task", "release")
 HARD_LIMIT_PHRASES = ("never merge", "never set priority", "prod", "secret")
 MAX_TICKET_SKILL_LINES = 220
@@ -185,6 +196,116 @@ class SkillsTest(unittest.TestCase):
             body = skill(name)[1]
             self.assertIn("Partial failure", body, name)
             self.assertIn("never re-create", body.lower(), name)
+
+
+class AreaSkillsTest(unittest.TestCase):
+    def test_action_skills_are_manual_only(self):
+        for name in AREA_ACTION_SKILLS:
+            meta, _ = skill(name)
+            self.assertEqual(meta.get("disable-model-invocation"), "true", name)
+
+    def test_status_skills_are_read_only_and_model_invocable(self):
+        for name in AREA_STATUS_SKILLS:
+            meta, body = skill(name)
+            self.assertNotIn("disable-model-invocation", meta, name)
+            self.assertIn("Read-only", meta["description"], name)
+            self.assertNotRegex(body, r"docker compose (up|down)|--stop|--start", name)
+
+    def test_focused_length(self):
+        for name in AREA_SKILLS:
+            lines = (SKILLS_DIR / name / "SKILL.md").read_text(encoding="utf-8").count("\n")
+            self.assertLessEqual(lines, MAX_AREA_SKILL_LINES, name)
+
+    def test_mobile_skills_use_the_clone_and_env_file_names(self):
+        for name in ("lw-mobile-start", "lw-mobile-fresh-launch", "lw-mobile-e2e", "lw-mobile-release"):
+            body = skill(name)[1]
+            self.assertIn("repos/uhis_lf_mobile", body, name)
+            self.assertIn("env.", body, name)
+        _, release = skill("lw-mobile-release")
+        for needle in ("dev", "training", "playstore", "scripts/release.sh", "libapp.so",
+                       "never commits, pushes, merges, tags", "Play Console"):
+            self.assertIn(needle, release)
+        self.assertEqual(skill("lw-mobile-release")[0].get("argument-hint"), "<dev|training|playstore>")
+
+    def test_frappe_skills_drive_the_env_script(self):
+        flags = {"lw-frappe-setup": "frappe_setup.sh`", "lw-frappe-start": "--start",
+                 "lw-frappe-stop": "--stop", "lw-frappe-status": "--status"}
+        for name, needle in flags.items():
+            self.assertIn("env/frappe/frappe_setup.sh", skill(name)[1], name)
+            self.assertIn(needle, skill(name)[1], name)
+        self.assertIn("--restart", skill("lw-frappe-start")[1])
+        for needle in ("repos/frappe_spice_next_core", "repos/leapwell_shukhee_integration", ".env.example"):
+            self.assertIn(needle, skill("lw-frappe-setup")[1])
+
+    def test_ai_skills_drive_the_service_repo(self):
+        for name in ("lw-ai-start", "lw-ai-stop", "lw-ai-status", "lw-ai-test"):
+            self.assertIn("repos/leapfrog-ai-service", skill(name)[1], name)
+        self.assertIn("docker compose up -d", skill("lw-ai-start")[1])
+        self.assertIn("http://localhost:8095/health", skill("lw-ai-start")[1])
+        self.assertIn("env.example", skill("lw-ai-start")[1])
+        self.assertIn("pytest -q", skill("lw-ai-test")[1])
+
+    def test_coaching_skills_use_documented_commands(self):
+        start = skill("lw-coaching-start")[1]
+        for needle in ("repos/spice-coaching", "repos/spice-coaching-dashboard-ui", "docker compose up --build",
+                       "uv sync --locked --all-packages --group dev", "npm run dev", "/medtronics-api/ready"):
+            self.assertIn(needle, start)
+        android = skill("lw-coaching-android-build")[1]
+        for needle in ("repos/spice-coaching-android", ":sdk-android:assembleDebug", ":app:assembleDebug",
+                       ":sdk-android:test", "publishToMavenLocal", "Never run `./gradlew :sdk-android:publish`"):
+            self.assertIn(needle, android)
+
+    def test_area_skills_name_no_secret_env_values(self):
+        for name in AREA_SKILLS:
+            body = skill(name)[1]
+            self.assertNotRegex(body, r"https?://[\w.-]*(labsplatform|amazonaws)", name)
+            self.assertNotRegex(body, r"PASSWORD_HASH_KEY=|--dart-define=PASSWORD", name)
+
+
+class FrappeEnvTest(unittest.TestCase):
+    def test_files_present(self):
+        for rel in ("docker-compose.yml", "frappe_setup.sh", ".env.example", "README.md",
+                    "docker/backend-v16/Dockerfile", "nginx/frappe.conf.template"):
+            self.assertTrue((FRAPPE_ENV / rel).is_file(), rel)
+
+    def test_setup_script_syntax(self):
+        result = subprocess.run(["bash", "-n", str(FRAPPE_ENV / "frappe_setup.sh")], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_help_runs_without_docker_or_env_file(self):
+        result = subprocess.run(["bash", str(FRAPPE_ENV / "frappe_setup.sh"), "--help"],
+                                capture_output=True, text=True, env={"PATH": "/usr/bin:/bin"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for flag in ("--start", "--stop", "--restart", "--status"):
+            self.assertIn(flag, result.stdout)
+
+    def test_refuses_to_run_without_env_file(self):
+        if (FRAPPE_ENV / ".env").exists():
+            self.skipTest("a local .env exists")
+        script = (FRAPPE_ENV / "frappe_setup.sh").read_text(encoding="utf-8")
+        self.assertIn("cp .env.example .env", script)
+        self.assertIn("[[ -f .env ]] || error", script)
+
+    def test_apps_come_from_workspace_clones(self):
+        compose = (FRAPPE_ENV / "docker-compose.yml").read_text(encoding="utf-8")
+        for name in ("frappe_spice_next_core", "leapwell_shukhee_integration"):
+            self.assertIn(f"../../repos/{name}:/workspace-apps/", compose)
+        script = (FRAPPE_ENV / "frappe_setup.sh").read_text(encoding="utf-8")
+        self.assertNotIn("bench new-app", script)
+        for app in ("spice_next_core", "shukhee_integration"):
+            self.assertIn(app, script)
+
+    def test_example_env_has_placeholders_only(self):
+        text = (FRAPPE_ENV / ".env.example").read_text(encoding="utf-8")
+        for key in ("DB_ROOT_PASSWORD", "ADMIN_PASSWORD", "SITE_NAME", "FRAPPE_BRANCH"):
+            self.assertRegex(text, rf"(?m)^{key}=")
+        self.assertEqual(text.count("change-me-local-only"), 2)
+        for name in ("docker-compose.yml", "frappe_setup.sh"):
+            self.assertNotRegex((FRAPPE_ENV / name).read_text(encoding="utf-8"),
+                                r"Admin@|:-123\b")
+
+    def test_data_dir_is_gitignored(self):
+        self.assertIn("/env/frappe/development/", (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines())
 
 
 class HubSkillsTest(unittest.TestCase):

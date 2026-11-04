@@ -1,0 +1,75 @@
+server {
+    listen 8080;
+    server_name _;
+
+    client_max_body_size 50m;
+
+    location /socket.io {
+        proxy_pass http://backend:9000;
+        proxy_http_version 1.1;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $http_host;
+        # Frappe's socket.io rejects a connection whose Origin hostname differs from Host, and it uses Origin as the
+        # URL to look the user up from inside the backend container: hence the bench port 8000 (the site name
+        # resolves to the container itself through extra_hosts in docker-compose.yml).
+        proxy_set_header Origin $scheme://$host:8000;
+        proxy_set_header X-Frappe-Site-Name ${SITE_NAME};
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    # Strips the /admin-api prefix before forwarding, so local mobile builds can use the same
+    # <base-url>/admin-api path shape as the deployed environments.
+    location /admin-api/ {
+        proxy_pass http://backend:8000/;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Frappe-Site-Name ${SITE_NAME};
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_read_timeout 120s;
+        proxy_connect_timeout 10s;
+
+        proxy_buffer_size          32k;
+        proxy_buffers              8 32k;
+        proxy_busy_buffers_size    64k;
+    }
+
+    location / {
+        proxy_pass http://backend:8000;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Frappe-Site-Name ${SITE_NAME};
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_read_timeout 120s;
+        proxy_connect_timeout 10s;
+
+        proxy_buffer_size          32k;
+        proxy_buffers              8 32k;
+        proxy_busy_buffers_size    64k;
+    }
+
+    location /assets {
+        proxy_pass http://backend:8000/assets;
+        proxy_cache_valid 200 1d;
+        add_header Cache-Control "public, max-age=86400";
+    }
+}
