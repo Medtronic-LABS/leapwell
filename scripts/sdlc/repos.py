@@ -26,6 +26,7 @@ class Repo:
     integration_branch: str
     protected_branches: tuple[str, ...]
     verify: dict[str, str]
+    notes: str = ""
 
 
 @dataclass(frozen=True)
@@ -70,7 +71,11 @@ def _parse_repo(entry: Any, index: int) -> Repo:
     verify = entry.get("verify")
     if not isinstance(verify, dict) or any(not isinstance(verify.get(k), str) for k in _VERIFY_KEYS):
         raise ValueError(f"{label}: 'verify' must define string values for {', '.join(_VERIFY_KEYS)}")
+    notes = entry.get("notes", "")
+    if not isinstance(notes, str):
+        raise ValueError(f"{label}: 'notes' must be a string")
     return Repo(
+        notes=notes,
         key=entry["key"], name=entry["name"], area=entry["area"], stack=entry["stack"],
         integration_branch=entry["integration_branch"],
         protected_branches=tuple(protected),

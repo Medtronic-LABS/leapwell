@@ -78,14 +78,25 @@ def fetch_subs(repo: str, number: int, gh: GhRunner) -> Optional[list[dict]]:
         return None
 
 
+def unreadable_count(parent: dict, subs: Optional[list[dict]]) -> int:
+    """Sub-issues we cannot account for: a failed fetch, a missing summary, or fewer visible than the parent's total."""
+    if subs is None:
+        return 1
+    summary = parent.get("sub_issues_summary")
+    total = summary.get("total") if isinstance(summary, dict) else None
+    if not isinstance(total, int) or isinstance(total, bool):
+        return 1
+    return abs(total - len(subs))
+
+
 def close_comment(subs: list[dict]) -> str:
     urls = "\n".join(f"- {sub.get('html_url', '')}" for sub in subs)
     return f"All sub-issues are closed, closing this parent:\n\n{urls}"
 
 
 def close_issue(repo: str, number: int, subs: list[dict], gh: GhRunner) -> None:
-    gh(["api", "-X", "POST", f"repos/{repo}/issues/{number}/comments", "-f", f"body={close_comment(subs)}"])
     gh(["api", "-X", "PATCH", f"repos/{repo}/issues/{number}", "-f", "state=closed", "-f", "state_reason=completed"])
+    gh(["api", "-X", "POST", f"repos/{repo}/issues/{number}/comments", "-f", f"body={close_comment(subs)}"])
 
 
 def process(repo: str, apply: bool, gh: GhRunner = run_gh) -> list[int]:
@@ -94,10 +105,10 @@ def process(repo: str, apply: bool, gh: GhRunner = run_gh) -> list[int]:
     for parent in list_routed(repo, gh):
         number = parent["number"]
         subs = fetch_subs(repo, number, gh)
-        unreadable = 1 if subs is None else 0
+        unreadable = unreadable_count(parent, subs)
         subs = subs or []
         if not decide(parent, subs, unreadable):
-            reason = "sub-issues unreadable" if unreadable else "not ready"
+            reason = "sub-issues unreadable or incomplete" if unreadable else "not ready"
             print(f"#{number}: keep open ({reason})")
             continue
         closable.append(number)
@@ -117,8 +128,8 @@ def main(argv: Optional[list[str]] = None, gh: GhRunner = run_gh) -> int:
     repo = args.repo or repos.load().tracker_slug
     try:
         process(repo, args.apply, gh)
-    except GhError as exc:
-        print(str(exc), file=sys.stderr)
+    except (GhError, ValueError) as exc:
+        print(f"close-parents failed: {exc}", file=sys.stderr)
         return 1
     return 0
 

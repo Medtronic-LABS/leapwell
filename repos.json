@@ -19,8 +19,9 @@
       "stack": "Frappe (Python)",
       "integration_branch": "main",
       "protected_branches": ["main"],
+      "notes": "needs the frappe env (env/frappe); site from env/frappe/.env",
       "verify": {
-        "test": "bench --site <site> run-tests --app spice_next_core (needs the frappe env)",
+        "test": "bench --site {site} run-tests --app spice_next_core",
         "lint": "ruff check spice_next_core/",
         "build": "bench build --app spice_next_core"
       }
@@ -32,8 +33,9 @@
       "stack": "Frappe (Python)",
       "integration_branch": "main",
       "protected_branches": ["main"],
+      "notes": "needs the frappe env (env/frappe); site from env/frappe/.env",
       "verify": {
-        "test": "bench --site <site> run-tests --app shukhee_integration (needs the frappe env)",
+        "test": "bench --site {site} run-tests --app shukhee_integration",
         "lint": "ruff check .",
         "build": "bench build --app shukhee_integration"
       }
@@ -45,6 +47,7 @@
       "stack": "Python FastAPI",
       "integration_branch": "develop",
       "protected_branches": ["develop", "main"],
+      "notes": "no build step",
       "verify": {"test": "pytest -q", "lint": "ruff check .", "build": ""}
     },
     {
@@ -54,6 +57,7 @@
       "stack": "Python",
       "integration_branch": "leapwell-main",
       "protected_branches": ["leapwell-main", "main"],
+      "notes": "no build step",
       "verify": {"test": "python -m pytest", "lint": "ruff check .", "build": ""}
     },
     {
@@ -63,6 +67,7 @@
       "stack": "Kotlin",
       "integration_branch": "leapwell-main",
       "protected_branches": ["leapwell-main", "main"],
+      "notes": "lint not documented - check README",
       "verify": {"test": "./gradlew :sdk-android:test", "lint": "", "build": "./gradlew :sdk-android:assembleDebug"}
     },
     {

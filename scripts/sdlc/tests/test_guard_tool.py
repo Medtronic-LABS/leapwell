@@ -50,6 +50,27 @@ class TestBashDeny(unittest.TestCase):
         ]:
             self.assertIsNotNone(bash(cmd), cmd)
 
+    def test_pushd_and_grouped_cd_forms(self):
+        for cmd in [
+            "pushd repos/spice-coaching && git push origin leapwell-main",
+            "(cd repos/uhis_lf_mobile && git push origin develop)",
+            "{ cd repos/uhis_lf_mobile && git push origin develop; }",
+            "(git push origin main)",
+        ]:
+            self.assertIsNotNone(bash(cmd), cmd)
+
+    def test_grouped_cd_resolves_branch_from_that_dir(self):
+        def resolver(cwd):
+            return "leapwell-main" if cwd == "/r/repos/spice-coaching" else "feat/1-x"
+
+        def run(cmd):
+            payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
+            return decide(payload, current_branch=resolver)
+
+        self.assertIsNotNone(run("(cd repos/spice-coaching && git push)"))
+        self.assertIsNotNone(run("pushd repos/spice-coaching && git push"))
+        self.assertIsNone(run("(cd repos/other && git push)"))
+
     def test_hub_workspace_feature_pushes_allowed(self):
         for cmd in [
             "git -C repos/spice-coaching push origin feat/12-x",

@@ -65,6 +65,14 @@ class TestRealManifest(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.manifest.by_key("nope")
 
+    def test_commands_are_runnable_and_notes_hold_prose(self):
+        for repo in self.manifest.repos:
+            self.assertIsInstance(repo.notes, str)
+            for command in repo.verify.values():
+                self.assertNotIn("(", command, repo.key)
+        self.assertIn("{site}", self.manifest.by_key("core").verify["test"])
+        self.assertIn("frappe env", self.manifest.by_key("core").notes)
+
     def test_every_repo_has_verify_commands(self):
         for repo in self.manifest.repos:
             self.assertEqual(set(repo.verify), {"test", "lint", "build"}, repo.key)

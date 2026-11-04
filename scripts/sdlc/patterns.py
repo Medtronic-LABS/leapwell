@@ -102,7 +102,7 @@ def is_protected_path(path: str) -> bool:
     return PROTECTED_PATH_RE.search(path) is not None
 
 
-TRACKER_SLUG = "Medtronic-LABS/leapwell"
+TRACKER_SLUG = "Medtronic-LABS/leapwell"  # kept in sync with repos.json by test_repos.test_tracker_slug_matches_patterns_constant
 _REF_KEYWORDS = r"(close[sd]?|fix(e[sd])?|resolve[sd]?|refs?)"
 
 # `<kw> #N` (same repo) or `<kw> Medtronic-LABS/leapwell#N` (cross-repo, from a code repo).

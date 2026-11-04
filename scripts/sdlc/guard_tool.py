@@ -189,7 +189,7 @@ def check_git(args: list[str], cwd: str, current_branch: BranchResolver) -> Opti
 
 
 def check_segment(segment: list[str], cwd: str, current_branch: BranchResolver) -> Optional[str]:
-    segment = strip_prefixes(segment)
+    segment = strip_prefixes(_drop_group_openers(segment))
     if not segment:
         return None
     if "--no-verify" in segment:
@@ -213,10 +213,23 @@ def check_command(command: str, cwd: str, current_branch: BranchResolver) -> Opt
     return None
 
 
+def _drop_group_openers(segment: list[str]) -> list[str]:
+    """Strip leading `(` / `{` tokens (and a `(cd` glued form) so grouped commands parse like bare ones."""
+    index = 0
+    while index < len(segment) and segment[index] in ("(", "{"):
+        index += 1
+    rest = segment[index:]
+    if rest and rest[0].startswith("(") and len(rest[0]) > 1:
+        rest = [rest[0].lstrip("(")] + rest[1:]
+    while rest and rest[-1] in (")", "}"):
+        rest = rest[:-1]
+    return rest
+
+
 def _after_cd(segment: list[str], cwd: str) -> str:
     """Directory later segments run in after `cd <path>` (so `cd repos/x && git push` resolves in x)."""
-    words = strip_prefixes(segment)
-    if len(words) == 2 and words[0] == "cd" and not words[1].startswith("-"):
+    words = strip_prefixes(_drop_group_openers(segment))
+    if len(words) == 2 and words[0] in ("cd", "pushd") and not words[1].startswith("-"):
         return os.path.normpath(os.path.join(cwd, os.path.expanduser(words[1])))
     return cwd
 
