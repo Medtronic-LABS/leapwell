@@ -1,0 +1,7 @@
+blank_issues_enabled: true
+contact_links:
+  # leapwell:begin
+  - name: File bugs, features and tasks in {{tracker}}
+    url: https://github.com/{{org}}/{{tracker}}/issues/new/choose
+    about: Tickets for {{repo}} are filed in {{org}}/{{tracker}} and routed here as sub-issues.
+  # leapwell:end
