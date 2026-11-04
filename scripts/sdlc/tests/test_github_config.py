@@ -165,8 +165,7 @@ class WorkflowsTest(unittest.TestCase):
     def test_issue_check_flags_unknown_component_for_triage(self):
         text = read("workflows/issue-check.yml")
         self.assertIn("status:triage", text)
-        self.assertIn("Repo or component (if known)", text)
-        self.assertIn("don't know", text)
+        self.assertIn("needs_triage", text)
         self.assertNotIn("label create", text, "labels come from labels.yml, not the workflow")
 
 

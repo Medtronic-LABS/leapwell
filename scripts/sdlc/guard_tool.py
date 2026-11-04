@@ -1,4 +1,4 @@
-"""Claude Code PreToolUse hook: deny risky git operations and secret-file access.
+"""Claude Code PreToolUse hook: deny risky git/gh operations, human-only gates and secret-file access.
 
 Reads the hook payload JSON on stdin. On deny, prints the reason to stderr and
 exits 2; otherwise exits 0 silently. Malformed input is always allowed.
@@ -40,6 +40,14 @@ PROTECTED_SAMPLE_PATHS = (
     "android/app/google-services.json", "ios/Runner/GoogleService-Info.plist",
     ".env", ".env.local",
 )
+GH_REPO_VALUE_OPTS = {"-R", "--repo"}
+GH_RELEASE_WRITES = {"create", "edit", "delete", "upload", "delete-asset"}
+GH_API_METHOD_OPTS = {"-X", "--method"}
+GH_API_FIELD_OPTS = {"-f", "-F", "--field", "--raw-field", "--input"}
+MUTATING_METHODS = {"PUT", "POST", "PATCH", "DELETE"}
+TAG_LIST_LONG = ("--list", "--verify", "--contains", "--points-at", "--merged", "--no-merged")
+TAG_PUSH_LONG = ("--tags", "--follow-tags")
+_PROTECTION_PATH_RE = re.compile(r"(^|/)repos/[^/]+/[^/]+/(branches/.+/protection|rulesets)(/|$|\?)")
 _ENV_ASSIGN_RE =re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 _SHORT_CLUSTER_RE = re.compile(r"^-[A-Za-z]+$")
 
@@ -157,6 +165,70 @@ def check_push(args: list[str], cwd: str, current_branch: BranchResolver) -> Opt
     return None
 
 
+def gh_positionals(args: list[str]) -> list[str]:
+    """Non-flag words of a gh invocation, skipping the values of -R/--repo."""
+    words: list[str] = []
+    skip_value = False
+    for token in args:
+        if skip_value:
+            skip_value = False
+        elif token in GH_REPO_VALUE_OPTS:
+            skip_value = True
+        elif not token.startswith("-"):
+            words.append(token)
+    return words
+
+
+def _gh_api_method(args: list[str]) -> str:
+    """HTTP method of a `gh api` call: explicit -X/--method, else POST when fields are sent, else GET."""
+    for index, token in enumerate(args):
+        if token in GH_API_METHOD_OPTS and index + 1 < len(args):
+            return args[index + 1].upper()
+        if token.startswith("--method="):
+            return token.partition("=")[2].upper()
+        if token.startswith("-X") and len(token) > 2:
+            return token[2:].upper()
+    if any(a in GH_API_FIELD_OPTS or a.startswith(("--field=", "--raw-field=", "--input=")) for a in args):
+        return "POST"
+    return "GET"
+
+
+def check_gh(args: list[str]) -> Optional[str]:
+    words = gh_positionals(args)
+    head = words[:2]
+    if head == ["pr", "merge"]:
+        return "humans only: merging a pull request (gh pr merge) is blocked. Ask a person to merge."
+    if head == ["pr", "review"] and any(a in ("--approve", "-a") or a.startswith("--approve=") for a in args):
+        return "humans only: approving a pull request (gh pr review --approve) is blocked."
+    if len(words) >= 2 and words[0] == "release" and words[1] in GH_RELEASE_WRITES:
+        return f"humans only: gh release {words[1]} is blocked. Tagging and publishing releases is a person's call."
+    if words[:1] == ["api"]:
+        paths = [w for w in words[1:] if _PROTECTION_PATH_RE.search(w.lstrip("/"))]
+        if paths and _gh_api_method(args) in MUTATING_METHODS:
+            return "humans only: changing branch protection or rulesets through gh api is blocked."
+    return None
+
+
+def check_git_tag(args: list[str]) -> Optional[str]:
+    if any(a in ("-d", "--delete", "-f", "--force") for a in args) or _has_short_flag(args, "d"):
+        return "humans only: deleting or moving git tags is blocked."
+    is_listing = (
+        any(a.startswith(TAG_LIST_LONG) for a in args)
+        or any(re.match(r"^-n\d*$", a) for a in args)
+        or _has_short_flag(args, "l")
+    )
+    if is_listing or not args:
+        return None
+    return "humans only: creating git tags is blocked (read-only `git tag -l` is fine)."
+
+
+def pushes_tags(args: list[str]) -> bool:
+    if any(a.startswith(TAG_PUSH_LONG) for a in args):
+        return True
+    positionals = [a for a in args if not a.startswith("-")]
+    return "tag" in positionals[1:2] or any("refs/tags/" in r for r in positionals)
+
+
 def commit_skips_hooks(args: list[str]) -> bool:
     """True when -n is a flag (not the value of -m/-F/...)."""
     skip_value = False
@@ -180,6 +252,10 @@ def check_git(args: list[str], cwd: str, current_branch: BranchResolver) -> Opti
         return "Overriding core.hooksPath is blocked (it bypasses the repo hooks)."
     if git.subcommand == "commit" and commit_skips_hooks(git.args):
         return "Skipping hooks (-n / --no-verify) is blocked."
+    if git.subcommand == "tag":
+        return check_git_tag(git.args)
+    if git.subcommand == "push" and pushes_tags(git.args):
+        return "humans only: pushing tags (--tags or a refs/tags/ refspec) is blocked."
     if git.subcommand == "push":
         repo_dir = os.path.join(cwd, git.directory) if git.directory else cwd
         return check_push(git.args, repo_dir, current_branch)
@@ -199,6 +275,8 @@ def check_segment(segment: list[str], cwd: str, current_branch: BranchResolver) 
         return check_command(segment[segment.index("-c") + 1], cwd, current_branch)
     if program == "git":
         return check_git(segment[1:], cwd, current_branch)
+    if program == "gh":
+        return check_gh(segment[1:])
     if program in DISPLAY_COMMANDS and any(is_protected_path(a) for a in segment[1:]):
         return "Displaying secret/config files (env*.json, key.properties, keystores, .env) is blocked."
     return None
@@ -257,6 +335,16 @@ def check_grep(tool_input: dict) -> Optional[str]:
     return None
 
 
+def check_glob(tool_input: dict) -> Optional[str]:
+    path = tool_input.get("path")
+    if isinstance(path, str) and is_protected_path(path):
+        return GREP_DENY
+    pattern = tool_input.get("pattern")
+    if isinstance(pattern, str) and (is_protected_path(pattern) or glob_targets_protected(pattern)):
+        return GREP_DENY + " Narrow the pattern (e.g. lib/**/*.dart)."
+    return None
+
+
 def decide(payload: Any, *, current_branch: BranchResolver = git_current_branch) -> Optional[str]:
     """Return a deny reason for the hook payload, or None to allow."""
     if not isinstance(payload, dict):
@@ -272,6 +360,8 @@ def decide(payload: Any, *, current_branch: BranchResolver = git_current_branch)
         return None
     if tool == "Grep":
         return check_grep(tool_input)
+    if tool == "Glob":
+        return check_glob(tool_input)
     command = tool_input.get("command")
     if tool == "Bash" and isinstance(command, str):
         cwd = payload.get("cwd") if isinstance(payload.get("cwd"), str) else os.getcwd()

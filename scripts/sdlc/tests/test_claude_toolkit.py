@@ -98,7 +98,7 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(set(settings), {"hooks"})
         self.assertEqual(set(settings["hooks"]), {"PreToolUse"})
         [entry] = settings["hooks"]["PreToolUse"]
-        self.assertEqual(entry["matcher"], "Bash|Read|Edit|Write|Grep")
+        self.assertEqual(entry["matcher"], "Bash|Read|Edit|Write|Grep|Glob")
         [hook] = entry["hooks"]
         self.assertEqual(hook, {"type": "command", "command": HOOK_COMMAND, "timeout": 10})
 
@@ -323,7 +323,7 @@ class HubSkillsTest(unittest.TestCase):
             "Is routing complete for this item?",
             "--add-label status:routed --remove-label status:triage",
             "gh project item-add 4 --owner Medtronic-LABS",
-            "python3 scripts/sdlc/check_issue.py",
+            "python3 scripts/sdlc/check_issue.py --scan-only",
             f"Parent: {TRACKER}#<N>",
             "leapfrog-ai-service",
             "private",

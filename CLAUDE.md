@@ -107,7 +107,9 @@ or Project fields; change GitHub settings, labels, branch protection, Discussion
 skill that shows a diff and waits for "yes"; touch prod keys, keystores, `key.properties`, `google-services.json`
 or `env*.json` (except `*.example`); create, edit or close issues without a preview and an explicit "yes".
 `scripts/github/*.sh` and `sync_repos.py` are dry-run by default; `--apply` only when asked. The
-`.claude/settings.json` guard hook and `.githooks/` enforce the dangerous parts.
+`.claude/settings.json` guard hook blocks PR merge/approve, releases, tags, force-push, protected-branch pushes,
+branch-protection API writes and secret-file access; `.githooks/` check commits. Other gates are rules, backed by
+GitHub branch protection.
 
 ## Privacy rules (public repo)
 

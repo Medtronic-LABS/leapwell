@@ -28,7 +28,7 @@ Tickets live in `Medtronic-LABS/leapwell` (the "what"); the work lives in code-r
      ```
    - Label: the parent's `type:*` label (dropped if the repo lacks it).
 
-4. **Privacy scrub.** For each draft, write `{"issue": {"title": "<title>", "body": "<body>", "labels": []}}` to a temp file with the Write tool and run `python3 scripts/sdlc/check_issue.py --event <file>`. It reports categories only; `"ok": false` means remove the flagged data (placeholders such as `<member-id>`) and re-run. Never paste patient data, names or tokens.
+4. **Privacy scrub.** For each draft, write `{"issue": {"title": "<title>", "body": "<body>", "labels": []}}` to a temp file with the Write tool and run `python3 scripts/sdlc/check_issue.py --scan-only --event <file>` (sub-issue drafts have no intake sections, so only the sensitive-data scan applies). It reports categories only; `"ok": false` means remove the flagged data (placeholders such as `<member-id>`) and re-run. Never paste patient data, names or tokens.
    If a draft targets `leapfrog-ai-service` (key `ai`), warn: that repo is private - people outside it will see the link from leapwell but not the sub-issue's details, so keep the shared context in the leapwell item.
 
 5. **Preview** every sub-issue in full (repo, title, label, body) and ask: "Create these N sub-issues? (yes / change something)". Act only on an explicit yes; any edit -> re-scrub and preview again.

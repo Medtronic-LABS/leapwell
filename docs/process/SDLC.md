@@ -146,7 +146,7 @@ data add `status:needs-info` and one bot comment; fixing the issue removes the l
 | leapwell | `pr-check.yml` | issue link present; branch name and sensitive-data checks |
 | leapwell | `issue-check.yml` | issue sections and privacy (labels the issue; not a PR gate) |
 | leapwell | `close-parents.yml` | hourly: closes routed items whose sub-issues are all closed |
-| each code repo | `pr-check`, `secret-scan`, `lw-close-on-merge` | the thin layer from `templates/repo-layer/`; contains no logic, runs leapwell's scripts at a pinned ref |
+| each code repo | `lw-pr-check`, `lw-secret-scan`, `lw-close-on-merge` | the thin layer from `templates/repo-layer/`; contains no logic, runs leapwell's scripts at a pinned ref |
 | each code repo | its own build/test CI | stays in the repo; leapwell does not own it |
 
 Required checks on leapwell `main`: `pr-check`, `sdlc-scripts`, `secret-scan`, `mockup-scan`.
@@ -245,8 +245,12 @@ explicit "yes" from the person; read or stage prod keys, keystores, `key.propert
 or `env*.json` (except `env.example.json`); print secrets or patient data; file security issues publicly.
 Subagents never spawn agents.
 
-Guard rails enforce most of this: the `.claude/settings.json` hook (`scripts/sdlc/guard_tool.py`) blocks the
-dangerous commands and secret-file access in Claude Code, and the git hooks in `.githooks/` check commit
+Guard rails enforce most of this: the `.claude/settings.json` hook (`scripts/sdlc/guard_tool.py`) blocks, in Claude
+Code, force-push, pushes to integration branches, `--no-verify`, `gh pr merge`, `gh pr review --approve`,
+`gh release create|edit|delete|upload`, creating or deleting git tags and pushing tags, `gh api` writes to branch
+protection or rulesets, and secret-file access through Bash, Read, Edit, Write, Grep and Glob. It is a
+best-effort guard on parsed commands, not a sandbox: the real gates are GitHub branch protection and CODEOWNERS,
+and other human-only rules (priority, settings, labels) are rules, not hook-enforced. and the git hooks in `.githooks/` check commit
 messages and block staged secrets. `/lw-setup` points every clone's `core.hooksPath` at leapwell's hooks, which
 then chain to the repo's own hooks, so nothing the repo already ran is disabled.
 

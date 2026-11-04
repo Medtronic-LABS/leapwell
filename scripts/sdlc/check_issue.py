@@ -1,6 +1,8 @@
 """Validate a GitHub issue against the LEAPWELL intake contract.
 
-CLI: python3 scripts/sdlc/check_issue.py --event "$GITHUB_EVENT_PATH"
+CLI: python3 scripts/sdlc/check_issue.py --event "$GITHUB_EVENT_PATH" [--scan-only]
+--scan-only skips the intake-section checks and only scans for sensitive data (for drafts that
+are not intake issues, e.g. routed sub-issues).
 Prints JSON {"ok", "comment", "marker", "needs_info_label"} and exits 0; the workflow decides labels.
 """
 import argparse
@@ -27,6 +29,10 @@ NEEDS_INFO_LABEL = "status:needs-info"
 _HEADING_RE = re.compile(r"^###[ \t]+(.+?)[ \t]*$", re.MULTILINE)
 _TICKED_RE = re.compile(r"-\s*\[[xX]\]")
 _EMPTY_VALUES = {"", "_no response_"}
+UNKNOWN_COMPONENT_HEADING = "Repo or component (if known)"
+_UNKNOWN_COMPONENT_VALUES = _EMPTY_VALUES | {"don't know"}
+ROUTED_LABEL = "status:routed"
+AREA_PREFIX = "area:"
 
 
 @dataclass
@@ -80,6 +86,22 @@ def evaluate(title: str, body: str, labels: list[str]) -> IssueResult:
     return result
 
 
+def scan_only(title: str, body: str) -> IssueResult:
+    """Sensitive-data scan only; no intake sections required (ok iff nothing sensitive was found)."""
+    return IssueResult(issue_type=None, sensitive=find_sensitive(f"{title}\n{body}"))
+
+
+def needs_triage(title: str, body: str, labels: list[str]) -> bool:
+    """True for a bug with an unknown component that nobody has routed or area-labelled yet."""
+    if ROUTED_LABEL in labels or any(label.startswith(AREA_PREFIX) for label in labels):
+        return False
+    if detect_type(title, labels) != "bug":
+        return False
+    component = parse_sections(body).get(UNKNOWN_COMPONENT_HEADING, "")
+    normalised = component.replace("\u2019", "'").replace("\u2018", "'").strip().lower()
+    return normalised in _UNKNOWN_COMPONENT_VALUES
+
+
 def render_comment(result: IssueResult) -> str:
     """Bot comment text; lists headings and categories only, never matched values."""
     lines = [COMMENT_MARKER]
@@ -104,10 +126,12 @@ def render_comment(result: IssueResult) -> str:
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--event", required=True, help="path to the GitHub event JSON")
+    parser.add_argument("--scan-only", action="store_true", help="only scan for sensitive data")
     args = parser.parse_args(argv)
     issue = json.loads(Path(args.event).read_text(encoding="utf-8"))["issue"]
     labels = [label["name"] for label in issue.get("labels") or []]
-    result = evaluate(issue.get("title") or "", issue.get("body") or "", labels)
+    title, body = issue.get("title") or "", issue.get("body") or ""
+    result = scan_only(title, body) if args.scan_only else evaluate(title, body, labels)
     print(json.dumps({
         "ok": result.ok,
         "comment": render_comment(result),

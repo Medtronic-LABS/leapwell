@@ -202,7 +202,7 @@ class TestFileTools(unittest.TestCase):
                 self.assertIsNone(self.file_tool(tool, path), (tool, path))
 
     def test_other_tools_allowed(self):
-        self.assertIsNone(decide({"tool_name": "Glob", "tool_input": {"pattern": "env*.json"}}))
+        self.assertIsNone(decide({"tool_name": "WebFetch", "tool_input": {"url": "env*.json"}}))
 
 
 class TestGrep(unittest.TestCase):
@@ -227,6 +227,54 @@ class TestGrep(unittest.TestCase):
 
     def test_non_string_inputs_allowed(self):
         self.assertIsNone(self.grep(path=None, glob=["env*.json"]))
+
+
+class TestGlob(unittest.TestCase):
+    def glob(self, **tool_input):
+        return decide({"tool_name": "Glob", "tool_input": tool_input})
+
+    def test_secret_targets_blocked(self):
+        for tool_input in ({"pattern": "env*.json"}, {"pattern": "**/.env*"}, {"pattern": "*.jks"},
+                           {"pattern": "*.dart", "path": "/r/env.production.json"}, {"pattern": "/r/.env"}):
+            self.assertIsNotNone(self.glob(**tool_input), tool_input)
+
+    def test_safe_allowed(self):
+        for tool_input in ({"pattern": "**/*.dart"}, {"pattern": "docs/**/*.md", "path": "/r/docs"},
+                           {"pattern": None, "path": None}, {}):
+            self.assertIsNone(self.glob(**tool_input), tool_input)
+
+
+class TestHumanOnlyGates(unittest.TestCase):
+    DENY = (
+        "gh pr merge 12", "gh pr merge --squash 12", "gh pr -R Medtronic-LABS/x merge 12",
+        "cd repos/x && gh pr merge 3", "(gh pr merge 3)", "bash -c 'gh pr merge 3'", "sudo gh pr merge 3",
+        "gh pr review 5 --approve", "gh pr review 5 -a", "gh pr review --approve -b ok",
+        "gh release create v1", "gh release edit v1", "gh release delete v1", "gh release upload v1 a.apk",
+        "git tag v1.0", "git tag -a v1.0 -m x", "git tag -d v1.0", "git tag --delete v1.0", "git tag -f v1",
+        "git -C repos/x tag v2", "git push --tags", "git push origin --tags", "git push origin refs/tags/v1",
+        "git push origin :refs/tags/v1", "git push origin tag v1", "git push --follow-tags",
+        "gh api -X PUT repos/o/r/branches/main/protection", "gh api --method DELETE repos/o/r/branches/main/protection",
+        "gh api -XPATCH /repos/o/r/rulesets/5", "gh api repos/o/r/rulesets -f name=x",
+        "gh api --method=POST repos/o/r/rulesets", "gh api repos/o/r/branches/develop/protection --input p.json",
+    )
+    ALLOW = (
+        "gh pr view 12", "gh pr create --draft", "gh pr review 5 --comment -b hi", "gh pr checks 3",
+        "gh pr comment 3 --body merge", "gh release view v1", "gh release list",
+        "git tag", "git tag -l", "git tag --list 'v*'", "git tag -n", "git tag --contains abc",
+        "git push origin feat/1-x", "gh api repos/o/r/branches/main/protection",
+        "gh api -X GET repos/o/r/rulesets", "gh api -X POST repos/o/r/issues/1/comments -f body=x",
+        "gh issue create --title t",
+    )
+
+    def test_denied(self):
+        for cmd in self.DENY:
+            reason = bash(cmd)
+            self.assertIsNotNone(reason, cmd)
+            self.assertIn("humans only", reason, cmd)
+
+    def test_allowed(self):
+        for cmd in self.ALLOW:
+            self.assertIsNone(bash(cmd), cmd)
 
 
 class TestMalformed(unittest.TestCase):

@@ -19,7 +19,7 @@ changed only by people. Every script below is **dry-run by default**: read the o
    `scripts/github/protect_branches.sh` (details below). Upload the `lw-ticket` org skill (section 6).
 3. `python3 scripts/sync/sync_repos.py --repo <key>` per code repo (after `/lw-setup`), review the diff, then
    `--apply`; it commits on a local `chore/leapwell-sync` branch inside `repos/<name>` and never pushes. The owner
-   pushes each branch and opens the PR. Start with one repo and check that its `pr-check` and `lw-close-on-merge` run.
+   pushes each branch and opens the PR. Start with one repo and check that its `lw-pr-check`, `lw-secret-scan` and `lw-close-on-merge` run.
 4. Announce to PM and QA: file everything in leapwell ([TICKETS.md](TICKETS.md)).
 
 ## 2. Labels, project fields and branch protection
@@ -108,6 +108,8 @@ the connector's OAuth app. Test with one user (file a test ticket, check it, clo
 - **Who needs what:** *triage* access on leapwell for PM and QA who set labels; *write* on leapwell for developers
   and on each code repo they work in (sub-issues are created in those repos and cross-repo links need access to
   both); the lead and PM own CODEOWNERS paths.
+- **Fork PR workflows (public repo):** Settings → Actions → General → Fork pull request workflows → enable
+  "Require approval for all outside collaborators", so a fork PR cannot run workflows (or reach secrets) unreviewed.
 - **Keep-alive:** GitHub disables scheduled workflows after 60 days without repo activity. If `close-parents`
   stops running, trigger it once (Actions → Close parents → Run workflow, or `workflow_dispatch`) to re-arm it.
 - **Private vulnerability reporting:** repo Settings → Code security → enable it. The issue chooser, `lw-ticket`
@@ -122,7 +124,7 @@ the connector's OAuth app. Test with one user (file a test ticket, check it, clo
 3. The first Frappe v16 run of `env/frappe` is unverified (`frappe_theme` on v16, Python 3.14 image); expect fixes.
 4. After leapwell is merged, remove the duplicated toolkit from `uhis_lf_mobile` (agents, workflow skills, guard hook,
    `scripts/sdlc`); it was left in place for now.
-5. Mobile's own `pr-check` and `secret-scan` versus the thin `lw-` layer: keep one of each per repo to avoid duplicate checks.
+5. Mobile's own `pr-check` and `secret-scan` versus the thin `lw-pr-check` / `lw-secret-scan` layer: keep one of each per repo to avoid duplicate checks.
 6. Whether Claude's Grep/Glob really search `repos/` through the shipped `.ignore` (`!/repos/`) is unverified.
 7. Thin workflows check out leapwell at `main` until the owner creates a tag; then `sync_repos.py --ref <tag>` re-pins everywhere.
 8. Integration branches in `repos.json` are starting values read on 2026-11-04; correct them there.

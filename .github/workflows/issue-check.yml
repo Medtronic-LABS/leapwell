@@ -39,17 +39,14 @@ jobs:
               env.write("CHECK_OK=" + ("true" if result["ok"] else "false") + "\n")
           PY
 
-      - name: Detect bugs with no known repo or component
+      - name: Detect untriaged bugs with no known repo or component
         run: |
           python3 - <<'PY'
           import json, os
-          from scripts.sdlc.check_issue import detect_type, parse_sections
+          from scripts.sdlc.check_issue import needs_triage
           issue = json.load(open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8"))["issue"]
           labels = [label["name"] for label in issue.get("labels") or []]
-          unknown = False
-          if detect_type(issue.get("title") or "", labels) == "bug":
-              component = parse_sections(issue.get("body") or "").get("Repo or component (if known)", "")
-              unknown = component.strip().lower() in {"", "_no response_", "don't know"}
+          unknown = needs_triage(issue.get("title") or "", issue.get("body") or "", labels)
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
               env.write("NEEDS_TRIAGE=" + ("true" if unknown else "false") + "\n")
           PY

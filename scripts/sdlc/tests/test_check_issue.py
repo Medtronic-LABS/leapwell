@@ -24,6 +24,32 @@ def make_body(issue_type: str, overrides: dict | None = None, privacy: str = TIC
     return "\n\n".join(f"### {h}\n\n{v}" for h, v in values.items())
 
 
+BUG_UNKNOWN = {"Repo or component (if known)": "Don't know"}
+
+
+class TestNeedsTriage(unittest.TestCase):
+    def needs(self, labels=None, overrides=None, title="[Bug] x"):
+        body = make_body("bug", overrides if overrides is not None else BUG_UNKNOWN)
+        return check_issue.needs_triage(title, body, ["type:bug"] + (labels or []))
+
+    def test_unknown_component_needs_triage(self):
+        self.assertTrue(self.needs())
+        self.assertTrue(self.needs(overrides={"Repo or component (if known)": "_No response_"}))
+
+    def test_curly_apostrophe_normalised(self):
+        self.assertTrue(self.needs(overrides={"Repo or component (if known)": "Don\u2019t know"}))
+
+    def test_known_component_not_triaged(self):
+        self.assertFalse(self.needs(overrides={"Repo or component (if known)": "mobile"}))
+
+    def test_routed_or_area_labelled_not_retriaged(self):
+        self.assertFalse(self.needs(labels=["status:routed"]))
+        self.assertFalse(self.needs(labels=["area:core"]))
+
+    def test_non_bug_not_triaged(self):
+        self.assertFalse(check_issue.needs_triage("t", make_body("task"), ["type:task"]))
+
+
 class TestEvaluate(unittest.TestCase):
     def test_complete_bug_ok(self):
         result = check_issue.evaluate("t", make_body("bug"), ["type:bug"])
@@ -149,6 +175,30 @@ class TestCli(unittest.TestCase):
         code, data = self.run_main(self.event(None))
         self.assertEqual(code, 0)
         self.assertFalse(data["ok"])
+
+    def run_main_args(self, event, extra):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = check_issue.main(["--event", self.write_event(event), *extra])
+        return code, json.loads(out.getvalue())
+
+    def test_scan_only_ignores_missing_sections(self):
+        event = {"issue": {"title": "x", "body": "## Summary\nplain text", "labels": []}}
+        code, data = self.run_main_args(event, ["--scan-only"])
+        self.assertEqual(code, 0)
+        self.assertTrue(data["ok"])
+        self.assertNotIn("Missing", data["comment"])
+
+    def test_scan_only_flags_sensitive(self):
+        event = {"issue": {"title": "x", "body": "call +8801712345678 now", "labels": []}}
+        _, data = self.run_main_args(event, ["--scan-only"])
+        self.assertFalse(data["ok"])
+        self.assertNotIn("8801712345678", data["comment"])
+
+    def test_scan_only_result_has_no_missing(self):
+        result = check_issue.scan_only("t", "b")
+        self.assertTrue(result.ok)
+        self.assertEqual(result.missing, [])
 
     def test_both_invocation_forms(self):
         path = self.write_event(self.event(make_body("bug")))
