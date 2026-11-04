@@ -1,0 +1,78 @@
+{
+  "org": "Medtronic-LABS",
+  "tracker": "leapwell",
+  "project": 4,
+  "repos": [
+    {
+      "key": "mobile",
+      "name": "uhis_lf_mobile",
+      "area": "Mobile app",
+      "stack": "Flutter",
+      "integration_branch": "develop",
+      "protected_branches": ["develop", "main"],
+      "verify": {"test": "flutter test", "lint": "flutter analyze", "build": "flutter build apk --debug"}
+    },
+    {
+      "key": "core",
+      "name": "frappe_spice_next_core",
+      "area": "Frappe apps",
+      "stack": "Frappe (Python)",
+      "integration_branch": "main",
+      "protected_branches": ["main"],
+      "verify": {
+        "test": "bench --site <site> run-tests --app spice_next_core (needs the frappe env)",
+        "lint": "ruff check spice_next_core/",
+        "build": "bench build --app spice_next_core"
+      }
+    },
+    {
+      "key": "shukhee",
+      "name": "leapwell_shukhee_integration",
+      "area": "Frappe apps",
+      "stack": "Frappe (Python)",
+      "integration_branch": "main",
+      "protected_branches": ["main"],
+      "verify": {
+        "test": "bench --site <site> run-tests --app shukhee_integration (needs the frappe env)",
+        "lint": "ruff check .",
+        "build": "bench build --app shukhee_integration"
+      }
+    },
+    {
+      "key": "ai",
+      "name": "leapfrog-ai-service",
+      "area": "AI Scribe",
+      "stack": "Python FastAPI",
+      "integration_branch": "develop",
+      "protected_branches": ["develop", "main"],
+      "verify": {"test": "pytest -q", "lint": "ruff check .", "build": ""}
+    },
+    {
+      "key": "coaching",
+      "name": "spice-coaching",
+      "area": "Micro-coaching",
+      "stack": "Python",
+      "integration_branch": "leapwell-main",
+      "protected_branches": ["leapwell-main", "main"],
+      "verify": {"test": "python -m pytest", "lint": "ruff check .", "build": ""}
+    },
+    {
+      "key": "coaching-android",
+      "name": "spice-coaching-android",
+      "area": "Micro-coaching",
+      "stack": "Kotlin",
+      "integration_branch": "leapwell-main",
+      "protected_branches": ["leapwell-main", "main"],
+      "verify": {"test": "./gradlew :sdk-android:test", "lint": "", "build": "./gradlew :sdk-android:assembleDebug"}
+    },
+    {
+      "key": "coaching-dashboard",
+      "name": "spice-coaching-dashboard-ui",
+      "area": "Micro-coaching",
+      "stack": "TypeScript/Vite",
+      "integration_branch": "leapwell-main",
+      "protected_branches": ["leapwell-main", "main"],
+      "verify": {"test": "npm run test -- --run", "lint": "npm run lint", "build": "npm run build"}
+    }
+  ]
+}
