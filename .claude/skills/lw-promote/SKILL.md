@@ -33,7 +33,7 @@ Ideas live in leapwell Discussions; agreed ones become `type:feature` issues. Pr
    2. `gh project item-add 4 --owner Medtronic-LABS --url <issue-url>`
    3. Comment on the discussion (body in a temp file: "Promoted to <issue-url>"):
       `gh api graphql -F discussionId=<id> -F body=@<comment-file> -f query='mutation($discussionId:ID!,$body:String!){addDiscussionComment(input:{discussionId:$discussionId,body:$body}){comment{url}}}'`
-   Delete the temp files.
+   **Partial failure:** if the issue was created but step 2 or 3 failed, never re-create the issue. Report the issue link and give the exact command that retries only the failed step (the `gh project item-add` line, or the `addDiscussionComment` line with the same `<id>` and comment file); run it only after the user's yes. Delete the temp files when done.
 
 7. **Report** the issue link, labels, comment link, and the next step (`/lw-route <N>` by a developer).
 

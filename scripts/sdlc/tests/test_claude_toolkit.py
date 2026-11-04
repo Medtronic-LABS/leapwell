@@ -15,7 +15,7 @@ SKILLS_DIR = CLAUDE / "skills"
 TICKET_DIR = SKILLS_DIR / "lw-ticket"
 FORMS_DIR = ROOT / ".github" / "ISSUE_TEMPLATE"
 LABELS_FILE = ROOT / ".github" / "labels.yml"
-FRAPPE_CHECKLIST = AGENTS_DIR / "references" / "frappe-review-checklist.md"
+FRAPPE_CHECKLIST = CLAUDE / "references" / "frappe-review-checklist.md"
 
 HOOK_COMMAND = 'python3 "$CLAUDE_PROJECT_DIR"/scripts/sdlc/guard_tool.py'
 READ_TOOLS = {"Read", "Grep", "Glob", "Bash"}
@@ -125,7 +125,7 @@ class AgentsTest(unittest.TestCase):
         _, body = frontmatter(AGENTS_DIR / "lw-reviewer.md")
         for verdict in ("Spec ✅", "Spec ❌", "Approved", "Changes requested", "Engineering Design Standards"):
             self.assertIn(verdict, body)
-        self.assertIn(".claude/agents/references/frappe-review-checklist.md", body)
+        self.assertIn(".claude/references/frappe-review-checklist.md", body)
         self.assertTrue(FRAPPE_CHECKLIST.is_file())
         checklist = FRAPPE_CHECKLIST.read_text(encoding="utf-8")
         for needle in ("@frappe.whitelist()", "allow_guest=True", "ignore_permissions=True",
@@ -177,6 +177,14 @@ class SkillsTest(unittest.TestCase):
         _, body = skill("lw-pr")
         for needle in ("Closes #<N>", f"Refs {TRACKER}#<M>", "gh pr create --draft", "--base <base>"):
             self.assertIn(needle, body)
+        self.assertIn("--title '<type>(<area>): <summary> (#<N>)'", body)
+        self.assertNotIn('--title "', body)
+
+    def test_partial_failures_retry_only_the_failed_step(self):
+        for name in ("lw-route", "lw-promote"):
+            body = skill(name)[1]
+            self.assertIn("Partial failure", body, name)
+            self.assertIn("never re-create", body.lower(), name)
 
 
 class HubSkillsTest(unittest.TestCase):
@@ -213,9 +221,12 @@ class HubSkillsTest(unittest.TestCase):
     def test_wiki_flow(self):
         _, body = skill("lw-wiki")
         for needle in (f"https://github.com/{TRACKER}.wiki.git", "python3 scripts/sdlc/scan_text.py",
-                       "diff", "push origin HEAD", "docs/process/"):
+                       "diff", "push origin HEAD:<wiki-branch>", "symbolic-ref --short HEAD",
+                       ".superpowers/wiki", "docs/process/"):
             self.assertIn(needle, body)
         self.assertLess(body.index(" diff"), body.index("push origin HEAD"))
+        self.assertNotIn("mktemp", body)
+        self.assertNotIn("--force ", body)
 
 
 class TicketSkillTest(unittest.TestCase):

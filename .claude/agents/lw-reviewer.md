@@ -13,7 +13,7 @@ The diff (`git -C repos/<name> diff <base>...HEAD`, or `gh pr diff <N> -R Medtro
 ## Check
 1. **Spec** - every acceptance criterion / task requirement is met; nothing extra was built; offline behaviour matches the issue.
 2. **Quality** - the "Engineering Design Standards" by name: layering, no business logic in UI, DRY, strings in the repo's strings module, config via the typed accessor / env, typed errors (no bare `catch (_)` / `except: pass`), tests for new public behaviour, approved endpoints only (mobile).
-3. **Frappe diffs** (`core`, `shukhee`): read `.claude/agents/references/frappe-review-checklist.md` and walk it against the diff.
+3. **Frappe diffs** (`core`, `shukhee`): read `.claude/references/frappe-review-checklist.md` and walk it against the diff.
 4. **Safety** - no secrets, env files, tokens or patient data in code, tests, logs or fixtures; auth, storage and consent paths untouched unless the task says so. Consent / PHI / auth findings are never below important.
 5. Read every changed file in full plus callers of changed functions. Every finding names the concrete input or state that breaks it. No style nits unless they break the standards.
 6. Run the focused tests and the repo's `verify.lint` from `repos.json` if they were not run (skip empty commands, honour `notes`), and report the result.

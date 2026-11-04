@@ -38,7 +38,7 @@ Tickets live in `Medtronic-LABS/leapwell` (the "what"); the work lives in code-r
    2. Database id (not the number): `gh api repos/Medtronic-LABS/<name>/issues/<n> --jq .id`
    3. Link: `gh api -X POST repos/Medtronic-LABS/leapwell/issues/$ARGUMENTS/sub_issues -F sub_issue_id=<id>`
    4. `gh project item-add 4 --owner Medtronic-LABS --url <issue-url>` (if this fails for a missing `project` scope, report it and continue).
-   If any step fails, stop, report what was created so far, and do not retry blindly.
+   **Partial failure:** stop and report what was created so far. Never re-create an issue that exists. Give the exact command that retries only the failed step - e.g. the link failed: `gh api -X POST repos/Medtronic-LABS/leapwell/issues/$ARGUMENTS/sub_issues -F sub_issue_id=<id>` with the id already fetched; the project add failed: `gh project item-add 4 --owner Medtronic-LABS --url <issue-url>`. Run it only after the user's yes.
 
 7. **Routing complete?** Ask: "Is routing complete for this item?" Only on yes:
    `gh issue edit $ARGUMENTS -R Medtronic-LABS/leapwell --add-label status:routed --remove-label status:triage`

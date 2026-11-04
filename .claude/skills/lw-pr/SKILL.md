@@ -24,8 +24,9 @@ disable-model-invocation: true
 4. **Push and create** (only after yes):
    ```
    git -C repos/<name> push -u origin <branch>
-   gh pr create --draft -R Medtronic-LABS/<name> --base <base> --head <branch> --title "<type>(<area>): <summary> (#<N>)" --body-file <tmpfile>
+   gh pr create --draft -R Medtronic-LABS/<name> --base <base> --head <branch> --title '<type>(<area>): <summary> (#<N>)' --body-file <tmpfile>
    ```
+   Single-quote the title and escape any single quote in it as `'\''`; never put user text in double quotes or an unquoted heredoc.
    Report the PR link. Because most integration branches are not the default branch, `lw-close-on-merge` closes `#<N>` when the PR merges. Marking it ready, requesting reviewers and merging are the human's steps.
 
 Never merge, never push to the integration branch or `main`, never force-push, never skip hooks.
