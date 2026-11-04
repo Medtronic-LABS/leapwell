@@ -119,5 +119,27 @@ class TestLoadOverride(unittest.TestCase):
                 repos.load(path)
 
 
+class TestCli(unittest.TestCase):
+    def run_main(self, *argv):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = repos.main(list(argv))
+        return code, out.getvalue()
+
+    def test_list_prints_key_name_branch(self):
+        code, out = self.run_main("--list")
+        self.assertEqual(code, 0)
+        lines = out.strip().splitlines()
+        self.assertEqual(len(lines), len(repos.load().repos))
+        self.assertIn("mobile uhis_lf_mobile develop", lines)
+
+    def test_get_prints_fact(self):
+        self.assertEqual(self.run_main("--get", "org"), (0, "Medtronic-LABS\n"))
+        self.assertEqual(self.run_main("--get", "tracker"), (0, "leapwell\n"))
+        self.assertEqual(self.run_main("--get", "project"), (0, "4\n"))
+
+
 if __name__ == "__main__":
     unittest.main()

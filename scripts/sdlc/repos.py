@@ -3,8 +3,10 @@
 `load()` honours the `LW_REPOS_JSON` environment variable (a path) so tests and
 tooling can point at another manifest.
 """
+import argparse
 import json
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -103,3 +105,28 @@ def load(path: Optional[os.PathLike] = None) -> Manifest:
     except json.JSONDecodeError as exc:
         raise ValueError(f"{source}: invalid JSON ({exc})") from exc
     return parse(data)
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    """CLI for shell scripts: `--list` prints `key name integration_branch` per repo;
+    `--get org|tracker|project` prints one top-level fact."""
+    parser = argparse.ArgumentParser(description="Read facts from repos.json")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--list", action="store_true", help="print 'key name integration_branch' per repo")
+    group.add_argument("--get", choices=("org", "tracker", "project"), help="print one top-level fact")
+    args = parser.parse_args(argv)
+    try:
+        manifest = load()
+    except (ValueError, OSError) as exc:
+        print(f"repos: {exc}", file=sys.stderr)
+        return 1
+    if args.list:
+        for repo in manifest.repos:
+            print(repo.key, repo.name, repo.integration_branch)
+    else:
+        print(getattr(manifest, args.get))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
