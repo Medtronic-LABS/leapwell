@@ -24,25 +24,27 @@ body:
     id: app_version
     attributes:
       label: App version
-      description: Settings > About, for example 1.1.0+15
+      description: Mobile app bugs - Settings > About, for example 1.1.0+15. Leave blank for backend or dashboard bugs.
     validations:
-      required: true
+      required: false
   - type: dropdown
     id: build_flavor
     attributes:
       label: Build flavor
+      description: The app build, or the environment a backend or dashboard bug happened in.
       options:
         - prod (LEAPWELL)
         - training (LW Training)
         - dev
     validations:
-      required: true
+      required: false
   - type: input
     id: device
     attributes:
       label: Device and Android version
+      description: Mobile app bugs only. Leave blank for backend or dashboard bugs.
     validations:
-      required: true
+      required: false
   - type: input
     id: screen
     attributes:

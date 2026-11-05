@@ -119,9 +119,9 @@ TRACKER_REF_RE = re.compile(rf"\b{_REF_KEYWORDS}\s+{re.escape(TRACKER_SLUG)}#\d+
 PRIVACY_HEADING = "Privacy check"
 
 REQUIRED_SECTIONS: dict[str, list[str]] = {
+    # App version, Build flavor and Device are optional: backend and dashboard bugs have none.
     "bug": [
-        "App version", "Build flavor", "Device and Android version", "Screen or feature",
-        "Steps to reproduce", "Expected behaviour", "Actual behaviour", "Frequency",
+        "Screen or feature", "Steps to reproduce", "Expected behaviour", "Actual behaviour", "Frequency",
         "Impact", PRIVACY_HEADING,
     ],
     "feature": [

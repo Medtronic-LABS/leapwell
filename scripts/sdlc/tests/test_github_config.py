@@ -57,6 +57,13 @@ class IssueFormsTest(unittest.TestCase):
         self.assertEqual(options, areas + ["Don't know"])
         self.assertRegex(text.split("validations:", 1)[1].split("- type:", 1)[0], r"required: false")
 
+    def test_bug_app_fields_optional_for_backend_bugs(self):
+        text = read("ISSUE_TEMPLATE/bug.yml")
+        for label in ("App version", "Build flavor", "Device and Android version"):
+            block = text.split(f"label: {label}", 1)[1].split("- type:", 1)[0]
+            self.assertIn("required: false", block, label)
+            self.assertNotIn(label, REQUIRED_SECTIONS["bug"])
+
     def test_config_disables_blank_issues_and_points_to_discussions(self):
         text = read("ISSUE_TEMPLATE/config.yml")
         self.assertIn("blank_issues_enabled: false", text)

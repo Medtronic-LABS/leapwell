@@ -178,14 +178,14 @@ class TestTrackerRef(unittest.TestCase):
 
     def test_bug_sections_unchanged_and_repo_not_required(self):
         self.assertNotIn("Repo", REQUIRED_SECTIONS["bug"])
-        self.assertEqual(len(REQUIRED_SECTIONS["bug"]), 10)
+        self.assertEqual(len(REQUIRED_SECTIONS["bug"]), 7)
 
 
 class TestContractTables(unittest.TestCase):
     def test_required_sections(self):
         self.assertEqual(REQUIRED_SECTIONS["release"], ["Version", "Release checklist"])
         self.assertEqual(REQUIRED_SECTIONS["task"][-1], "Privacy check")
-        self.assertEqual(len(REQUIRED_SECTIONS["bug"]), 10)
+        self.assertEqual(len(REQUIRED_SECTIONS["bug"]), 7)
         self.assertEqual(len(REQUIRED_SECTIONS["feature"]), 7)
 
     def test_type_labels(self):

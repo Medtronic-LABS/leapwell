@@ -72,6 +72,13 @@ class TestEvaluate(unittest.TestCase):
     def test_optional_headings_not_required(self):
         self.assertTrue(check_issue.evaluate("t", make_body("bug"), ["type:bug"]).ok)
 
+    def test_backend_bug_without_app_fields_ok(self):
+        body = make_body("bug", {"Repo or component (if known)": "Frappe apps"})
+        body += "".join(f"\n\n### {h}\n\n_No response_"
+                        for h in ("App version", "Build flavor", "Device and Android version"))
+        result = check_issue.evaluate("t", body, ["type:bug"])
+        self.assertTrue(result.ok, result.missing)
+
     def test_privacy_unticked(self):
         result = check_issue.evaluate("t", make_body("task", privacy=UNTICKED), ["type:task"])
         self.assertTrue(result.privacy_unchecked)
