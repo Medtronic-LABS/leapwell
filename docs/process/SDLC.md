@@ -248,7 +248,10 @@ Subagents never spawn agents.
 Guard rails enforce most of this: the `.claude/settings.json` hook (`scripts/sdlc/guard_tool.py`) blocks, in Claude
 Code, force-push, pushes to integration branches, `--no-verify`, `gh pr merge`, `gh pr review --approve`,
 `gh release create|edit|delete|upload`, creating or deleting git tags and pushing tags, `gh api` writes to branch
-protection or rulesets, and secret-file access through Bash, Read, Edit, Write and Grep (Glob only lists names and is not guarded). It is a
+protection or rulesets, and secret-file access through Bash, Read, Edit, Write and Grep (Glob only lists names and is not guarded).
+In Bash that covers commands that print, copy, send or load a secret file (`cat`, `grep`, `sed`, `jq`, `cp`, `curl`,
+interpreters, redirects, `git show`) and recursive `grep` or `rg -u`, which would read gitignored files (use `rg` or
+`git grep`). Build tools that only consume an env file (`flutter --dart-define-from-file`) are allowed. It is a
 best-effort guard on parsed commands, not a sandbox: the real gates are GitHub branch protection and CODEOWNERS,
 and other human-only rules (priority, settings, labels) are rules, not hook-enforced. The git hooks in
 `.githooks/` check commit messages and block staged secrets. `/lw-setup` points every clone's `core.hooksPath` at leapwell's hooks, which

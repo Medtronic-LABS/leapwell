@@ -24,6 +24,26 @@ BranchResolver = Callable[[str], Optional[str]]
 FALLBACK_PROTECTED_BRANCHES = {"main", "develop"}
 FILE_TOOLS = {"Read", "Edit", "Write"}
 DISPLAY_COMMANDS = {"cat", "less", "more", "head", "tail", "bat", "nl", "xxd", "strings", "base64"}
+# Programs that print, copy, send or load a file they are given. Build tools that only consume an
+# env file (flutter --dart-define-from-file, docker compose --env-file) are deliberately absent.
+READ_COMMANDS = DISPLAY_COMMANDS | {
+    "grep", "egrep", "fgrep", "rg", "ag", "sed", "awk", "gawk", "jq", "yq", "cut", "sort", "uniq", "tr",
+    "diff", "cmp", "comm", "od", "hexdump", "cp", "mv", "scp", "rsync", "tee", "dd", "zip", "tar", "gzip",
+    "vi", "vim", "nvim", "nano", "emacs", "code", "open", "curl", "wget", "source", ".",
+    "python", "python3", "node", "ruby", "perl", "php", "deno", "bun",
+}
+REDIRECTS = {"<", ">", ">>"}
+GIT_READ_SUBCOMMANDS = {"show", "cat-file", "diff", "grep", "log", "blame"}
+GREP_PROGRAMS = {"grep", "egrep", "fgrep"}
+GREP_RECURSIVE_LONG = ("--recursive", "--dereference-recursive", "--directories=recurse")
+RG_UNIGNORE_LONG = ("--no-ignore", "--hidden", "--unrestricted")
+SECRET_READ_DENY = "Reading or copying secret/config files (env*.json, key.properties, keystores, .env) is blocked."
+RECURSIVE_GREP_DENY = (
+    "Recursive search that includes gitignored files can print secret/config files (env*.json, .env, "
+    "key.properties). Use `rg` or `git grep`, which skip gitignored files."
+)
+# Splits code and option values (`open('x/env.json')`, `HEAD:env.json`, `-d @env.json`) into path-like pieces.
+_PATH_PIECE_SPLIT_RE = re.compile(r"[\"'=(),:<>@]")
 SHELLS = {"bash", "sh", "zsh"}
 WRAPPERS = {"command", "sudo", "env", "nohup", "exec", "time"}
 COMMIT_VALUE_OPTS = {"-m", "-F", "-c", "-C", "--message", "--file", "--author", "--date", "--template"}
@@ -261,7 +281,41 @@ def check_git(args: list[str], cwd: str, current_branch: BranchResolver) -> Opti
         return check_push(git.args, repo_dir, current_branch)
     if git.subcommand == "add" and any(is_protected_path(a) for a in git.args if not a.startswith("-")):
         return "Staging secret/config files (env*.json, key.properties, keystores, .env) is blocked."
+    if git.subcommand in GIT_READ_SUBCOMMANDS and mentions_protected_path(git.args):
+        return SECRET_READ_DENY
     return None
+
+
+def mentions_protected_path(tokens: list[str]) -> bool:
+    """True when a token, or a path-like piece of one (code, `ref:path`, `opt=path`), is a secret file."""
+    return any(
+        is_protected_path(piece)
+        for token in tokens
+        for piece in [token, *_PATH_PIECE_SPLIT_RE.split(token)]
+        if piece
+    )
+
+
+def redirects_protected_path(segment: list[str]) -> bool:
+    return any(
+        token in REDIRECTS and index + 1 < len(segment) and is_protected_path(segment[index + 1])
+        for index, token in enumerate(segment)
+    )
+
+
+def searches_ignored_files(program: str, args: list[str]) -> bool:
+    """grep in recursive mode, or rg told to include gitignored/hidden files."""
+    if program in GREP_PROGRAMS:
+        return any(
+            arg.startswith(GREP_RECURSIVE_LONG)
+            or (_SHORT_CLUSTER_RE.match(arg) and ("r" in arg or "R" in arg))
+            or (arg == "-d" and index + 1 < len(args) and args[index + 1] == "recurse")
+            for index, arg in enumerate(args)
+        )
+    if program == "rg":
+        return any(arg.startswith(RG_UNIGNORE_LONG) or (_SHORT_CLUSTER_RE.match(arg) and "u" in arg)
+                   for arg in args)
+    return False
 
 
 def check_segment(segment: list[str], cwd: str, current_branch: BranchResolver) -> Optional[str]:
@@ -279,6 +333,10 @@ def check_segment(segment: list[str], cwd: str, current_branch: BranchResolver) 
         return check_gh(segment[1:])
     if program in DISPLAY_COMMANDS and any(is_protected_path(a) for a in segment[1:]):
         return "Displaying secret/config files (env*.json, key.properties, keystores, .env) is blocked."
+    if redirects_protected_path(segment) or (program in READ_COMMANDS and mentions_protected_path(segment[1:])):
+        return SECRET_READ_DENY
+    if searches_ignored_files(program, segment[1:]):
+        return RECURSIVE_GREP_DENY
     return None
 
 
