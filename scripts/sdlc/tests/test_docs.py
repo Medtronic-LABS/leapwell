@@ -110,7 +110,7 @@ class ProcessDocsTest(unittest.TestCase):
                        "setup_project.sh", "publish_wiki.sh", "protect_branches.sh", "sync_repos.py", "--apply",
                        "leapwell_bot_token", "issues: read", "issues: write", "60 days", "workflow_dispatch",
                        "private vulnerability reporting", "settings.local.json", "open decisions",
-                       "env.staging.json", "frappe v16", "triage", "first page",
+                       "env.development.json", "frappe v16", "triage", "first page",
                        "item added to project", "item closed", "pull request merged", "item reopened",
                        "auto-add to project"):
             self.assertIn(phrase, admin)
