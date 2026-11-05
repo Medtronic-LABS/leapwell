@@ -95,12 +95,21 @@ def toolkit_files():
 class SettingsTest(unittest.TestCase):
     def test_hooks_only_with_guard_tool(self):
         settings = json.loads((CLAUDE / "settings.json").read_text(encoding="utf-8"))
-        self.assertEqual(set(settings), {"hooks"})
+        self.assertEqual(set(settings), {"hooks", "permissions"})
         self.assertEqual(set(settings["hooks"]), {"PreToolUse"})
         [entry] = settings["hooks"]["PreToolUse"]
         self.assertEqual(entry["matcher"], "Bash|Read|Edit|Write|Grep")
         [hook] = entry["hooks"]
         self.assertEqual(hook, {"type": "command", "command": HOOK_COMMAND, "timeout": 10})
+
+    def test_pre_approved_commands_are_read_only(self):
+        settings = json.loads((CLAUDE / "settings.json").read_text(encoding="utf-8"))
+        self.assertEqual(set(settings["permissions"]), {"allow"})
+        writes = ("push", "commit", "merge", "tag", "release", "create", "edit", "close", "delete", "api",
+                  "apply", "reset", "checkout", "switch", "rm", "branch -D", "branch -d")
+        for rule in settings["permissions"]["allow"]:
+            self.assertRegex(rule, r"^Bash\(.+\)$", rule)
+            self.assertFalse(any(w in rule for w in writes), rule)
 
 
 class AgentsTest(unittest.TestCase):
