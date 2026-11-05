@@ -263,7 +263,7 @@ then chain to the repo's own hooks, so nothing the repo already ran is disabled.
 git clone https://github.com/Medtronic-LABS/leapwell.git && cd leapwell
 gh auth login                  # GitHub CLI, used by the lw-* skills
 gh auth refresh -s project     # lets /lw-ticket add new issues to Project #4
-claude                         # always start Claude from the leapwell root
+claude                         # always start Claude from the leapwell root; accept the folder-trust prompt
 # then, inside Claude:  /lw-setup
 ```
 

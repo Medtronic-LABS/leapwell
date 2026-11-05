@@ -36,7 +36,7 @@ Read the matching reference file now; it holds the questions, choices, derivatio
 
 ### 2. Duplicate check
 Before the interview, take 2-3 keywords from the user's first description (screen, symptom, feature name) and search **open** issues in leapwell and in the legacy mobile tracker (older tickets still live there):
-- Claude Code (plain words only - no quotes or symbols inside the single quotes):
+- Claude Code (plain words only - no quotes or symbols inside the single quotes). Run each command as its own call - never join them with `;`, `&&` or `echo` - so the workspace's pre-approved read-only commands run without a permission prompt:
   - `gh issue list --repo Medtronic-LABS/leapwell --state open --search '<keywords>' --limit 5 --json number,title,url`
   - `gh issue list --repo Medtronic-LABS/uhis_lf_mobile --state open --search '<keywords>' --limit 5 --json number,title,url`
 - Chat: the connector's search tool with `repo:Medtronic-LABS/leapwell repo:Medtronic-LABS/uhis_lf_mobile is:issue is:open <keywords>`.

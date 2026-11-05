@@ -136,6 +136,7 @@ use `env.development.json` pointed at the dev backend (there is no `env.staging.
 ## 9. Every developer, once
 
 See SDLC.md section 11: clone leapwell, `gh auth login`, `gh auth refresh -s project`, start `claude` from the leapwell
-root, run `/lw-setup`. If you had a personal, untracked `.claude/settings.json`, rename it to
+root and accept the folder-trust prompt (until then the pre-approved read-only commands in `.claude/settings.json`
+are ignored), run `/lw-setup`. If you had a personal, untracked `.claude/settings.json`, rename it to
 `.claude/settings.local.json` **before** pulling, otherwise git refuses to overwrite it. Personal permissions
 belong in `settings.local.json` (gitignored).

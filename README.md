@@ -25,6 +25,10 @@ gh auth login && gh auth refresh -s project
 claude            # start Claude from the leapwell root, always
 ```
 
+The first time, Claude asks whether you trust this folder - accept it. Until you do, the read-only commands
+pre-approved in `.claude/settings.json` are ignored and every `git status` asks for permission (the guard hook
+runs either way).
+
 Then, inside Claude, run `/lw-setup`. It clones the seven code repos listed in
 [REPOS.md](docs/process/REPOS.md) into `repos/`, points their git hooks at leapwell's, and reports which tools
 (git, gh, python3 3.11+, flutter, docker, node, java) are missing for which area. It is safe to re-run.
