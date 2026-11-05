@@ -119,15 +119,17 @@ the connector's OAuth app. Test with one user (file a test ticket, check it, clo
 
 ## 8. Open decisions (owner)
 
-1. Bug fields (version, build, device) are required in the bug form; make them optional for non-mobile components.
-2. `lw-mobile-release` needs a dev env file for the `dev` target (`env.staging.json` is assumed); confirm or name another.
-3. The first Frappe v16 run of `env/frappe` is unverified (`frappe_theme` on v16, Python 3.14 image); expect fixes.
-4. After leapwell is merged, remove the duplicated toolkit from `uhis_lf_mobile` (agents, workflow skills, guard hook,
+Decided 2026-11-05: bug fields App version, Build flavor and Device are optional (backend and dashboard bugs have
+none); LeapWell runs on Frappe v16 (`spice_next_core`'s README still says v15 - update it there).
+
+1. `lw-mobile-release` needs a dev env file for the `dev` target (`env.staging.json` is assumed); confirm or name another.
+2. The first Frappe v16 run of `env/frappe` is unverified (`frappe_theme` on v16, Python 3.14 image); expect fixes.
+3. After leapwell is merged, remove the duplicated toolkit from `uhis_lf_mobile` (agents, workflow skills, guard hook,
    `scripts/sdlc`); it was left in place for now.
-5. Mobile's own `pr-check` and `secret-scan` versus the thin `lw-pr-check` / `lw-secret-scan` layer: keep one of each per repo to avoid duplicate checks.
-6. Whether Claude's Grep/Glob really search `repos/` through the shipped `.ignore` (`!/repos/`) is unverified.
-7. Thin workflows check out leapwell at `main` until the owner creates a tag; then `sync_repos.py --ref <tag>` re-pins everywhere.
-8. Integration branches in `repos.json` are starting values read on 2026-11-04; correct them there.
+4. Mobile's own `pr-check` and `secret-scan` versus the thin `lw-pr-check` / `lw-secret-scan` layer: keep one of each per repo to avoid duplicate checks.
+5. Whether Claude's Grep/Glob really search `repos/` through the shipped `.ignore` (`!/repos/`) is unverified.
+6. Thin workflows check out leapwell at `main` until the owner creates a tag; then `sync_repos.py --ref <tag>` re-pins everywhere.
+7. Integration branches in `repos.json` are starting values read on 2026-11-04; correct them there.
 
 ## 9. Every developer, once
 

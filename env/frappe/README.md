@@ -48,9 +48,10 @@ Use the site from `.env` and the commands in `repos.json` (`verify.test`, `verif
 
 ## Notes
 
-- `FRAPPE_BRANCH` defaults to `version-16` because `leapwell_shukhee_integration` requires Python >= 3.14 (the
-  backend image `docker/backend-v16` is Python 3.14 / Node 24). `spice_next_core`'s README targets v15 and
-  `frappe_theme` (branch `development`) on v16 is unverified, so the first run may need fixes.
+- LeapWell runs on Frappe **v16** (owner decision, 2026-11-05): `FRAPPE_BRANCH` defaults to `version-16`, and
+  `leapwell_shukhee_integration` requires Python >= 3.14 (the backend image `docker/backend-v16` is Python 3.14 /
+  Node 24). `spice_next_core`'s README still says v15 and should be updated there. `frappe_theme` (branch
+  `development`) on v16 is not yet verified, so the first run may need fixes.
 - AI narrative features need an OpenAI-compatible LLM endpoint (e.g. Ollama) configured in Spice Settings; this
   env does not provision one.
 - Not included from the UHIS-Next setup: PostgreSQL, Ollama, LiveKit, the second evaluation site, and the
