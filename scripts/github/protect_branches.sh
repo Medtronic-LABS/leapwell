@@ -10,7 +10,7 @@ Usage: scripts/github/protect_branches.sh [--apply] [--help]
 
 Protects main of $OWNER/$REPO:
   1 approval, CODEOWNERS review, dismiss stale reviews, strict required checks
-  Required checks: pr-check, sdlc-scripts, secret-scan, mockup-scan
+  Required checks: pr-check, sdlc-scripts, lint, secret-scan, mockup-scan
   No force push, no deletion, conversation resolution required, enforce_admins false.
 Code repos are protected by their own owners; this script only touches the tracker.
 Default is a dry-run that only prints the gh api call and body.
@@ -21,7 +21,7 @@ parse_common_flags usage "$@"
 reject_unknown_args
 banner
 
-CHECKS='["pr-check", "sdlc-scripts", "secret-scan", "mockup-scan"]'
+CHECKS='["pr-check", "sdlc-scripts", "lint", "secret-scan", "mockup-scan"]'
 
 protection_body() {
   cat <<JSON

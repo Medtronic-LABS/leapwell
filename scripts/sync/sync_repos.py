@@ -44,6 +44,11 @@ MARKED_FILES = (
 # GitHub also reads these from the repo root and docs/; a clone's existing copy wins over .github/.
 GITHUB_ALT_DIRS = ("", "docs")
 ALT_LOCATION_FILES = frozenset({".github/pull_request_template.md", ".github/CODEOWNERS"})
+# Written only for repos with lint_rules; the CI toolchain follows from each rule's command.
+LINT_TEMPLATE = "lint.yml"
+LINT_WORKFLOW = ".github/workflows/lw-lint.yml"
+LINT_SETUP_BY_TOOL = {"dart": "flutter.yml", "ruff": "python.yml", "npx": "node.yml"}
+RUFF_VERSION = "0.17.3"
 
 
 @dataclass
@@ -70,10 +75,24 @@ def render(template: str, repo: repos.Repo, manifest: repos.Manifest, ref: str) 
         "repo": repo.name,
         "integration_branch": repo.integration_branch,
         "leapwell_ref": ref,
+        "ruff_version": RUFF_VERSION,
     }
     for name, value in values.items():
         template = template.replace("{{" + name + "}}", value)
     return template
+
+
+def lint_setup(repo: repos.Repo) -> str:
+    """CI steps installing the tools the repo's lint_rules run, in first-use order."""
+    snippets: list[str] = []
+    for rule in repo.lint_rules:
+        tool = rule.run.split()[0]
+        if tool not in LINT_SETUP_BY_TOOL:
+            raise SyncError(f"no CI setup for lint tool {tool!r}; add one to LINT_SETUP_BY_TOOL")
+        snippet = LINT_SETUP_BY_TOOL[tool]
+        if snippet not in snippets:
+            snippets.append(snippet)
+    return "".join(_template(f"lint-setup/{name}") for name in snippets)
 
 
 def _marker_re(markers: tuple[str, str]) -> re.Pattern[str]:
@@ -160,6 +179,10 @@ def plan_repo(clone: Path, repo: repos.Repo, manifest: repos.Manifest, ref: str)
     for name, rel in MANAGED_FILES.items():
         rel = resolve_path(clone, rel)
         propose(rel, _read(clone, rel), render(_template(name), repo, manifest, ref))
+
+    if repo.lint_rules:
+        template = _template(LINT_TEMPLATE).replace("{{lint_setup}}", lint_setup(repo))
+        propose(LINT_WORKFLOW, _read(clone, LINT_WORKFLOW), render(template, repo, manifest, ref))
 
     for name, rel in CREATE_ONLY_FILES.items():
         rel = resolve_path(clone, rel)

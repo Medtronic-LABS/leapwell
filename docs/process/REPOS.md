@@ -16,7 +16,7 @@ each into `repos/<name>` in the workspace. `leapfrog-ai-service` is private; the
 
 `{site}` is the Frappe site name from `env/frappe/.env`. The Frappe repos run their checks inside the bench
 (`env/frappe/README.md`). Each repo's branch protection, own build/test CI and extra tooling stay the repo's own;
-leapwell adds only the thin layer from `templates/repo-layer/` (`lw-pr-check`, `lw-secret-scan`, `lw-close-on-merge`, PR
+leapwell adds only the thin layer from `templates/repo-layer/` (`lw-pr-check`, `lw-secret-scan`, `lw-close-on-merge`, `lw-lint`, PR
 template, `CODEOWNERS`, issue-chooser pointer, `CLAUDE.md` section). Each repo has an `area:<key>` label in leapwell.
 
 Product areas and the repos behind them are in the Wiki page `Repos-and-Areas` (seed: `wiki/Repos-and-Areas.md`).

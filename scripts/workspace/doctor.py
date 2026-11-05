@@ -15,10 +15,13 @@ MIN_PYTHON = (3, 11)
 BASE_TOOLS = ("git", "gh", "python3")
 AREA_TOOLS = {
     "Mobile app": ("flutter", "java"),
-    "Frappe apps": ("docker",),
+    # pre-commit: these repos keep a .pre-commit-config.yaml, which the hook chain runs.
+    "Frappe apps": ("docker", "pre-commit"),
     "AI Scribe": ("docker", "python3"),
-    "Micro-coaching": ("docker", "node", "npm", "java"),
+    "Micro-coaching": ("docker", "node", "npm", "java", "pre-commit"),
 }
+# Lint commands whose tool is already covered by another row (npx ships with node/npm).
+LINT_RUNNERS_COVERED = {"npx"}
 
 Which = Callable[[str], str | None]
 Run = Callable[[list[str]], int]
@@ -31,21 +34,39 @@ def _run(command: list[str]) -> int:
         return 1
 
 
-def required_tools(areas: list[str]) -> dict[str, list[str]]:
-    """tool -> sorted reasons ('workspace' or an area)."""
+def lint_tools(manifest: repos.Manifest, selected: tuple[repos.Repo, ...] | list[repos.Repo]) -> dict[str, set[str]]:
+    """tool -> areas whose lint_rules run it; leapwell's own rules count as 'workspace'."""
+    needs: dict[str, set[str]] = {}
+    sources = [("workspace", manifest.hub_lint_rules)] + [(repo.area, repo.lint_rules) for repo in selected]
+    for reason, rules in sources:
+        for rule in rules:
+            tool = rule.run.split()[0]
+            if tool not in LINT_RUNNERS_COVERED:
+                needs.setdefault(tool, set()).add(reason)
+    return needs
+
+
+def required_tools(areas: list[str], extra: dict[str, set[str]] | None = None) -> dict[str, list[str]]:
+    """tool -> sorted reasons ('workspace' or an area); `extra` adds lint tools."""
     needs: dict[str, set[str]] = {tool: {"workspace"} for tool in BASE_TOOLS}
     for area in areas:
         for tool in AREA_TOOLS.get(area, ()):
             needs.setdefault(tool, set()).add(area)
+    for tool, reasons in (extra or {}).items():
+        needs.setdefault(tool, set()).update(reasons)
     return {tool: sorted(reasons) for tool, reasons in needs.items()}
 
 
 def check(
-    areas: list[str], which: Which = shutil.which, run: Run = _run, python_version: tuple = tuple(sys.version_info[:2])
+    areas: list[str],
+    which: Which = shutil.which,
+    run: Run = _run,
+    python_version: tuple = tuple(sys.version_info[:2]),
+    extra: dict[str, set[str]] | None = None,
 ) -> list[tuple[str, str, str]]:
     """Rows of (tool, status, detail); status is 'ok', 'MISSING' or 'FAIL'."""
     rows = []
-    for tool, reasons in required_tools(areas).items():
+    for tool, reasons in required_tools(areas, extra).items():
         detail = "needed by " + ", ".join(reasons)
         if which(tool) is None:
             rows.append((tool, "MISSING", detail))
@@ -71,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
     manifest = repos.load()
     keys = [k for k in args.only.split(",") if k]
     selected = [r for r in manifest.repos if not keys or r.key in keys]
-    rows = check(sorted({r.area for r in selected}))
+    rows = check(sorted({r.area for r in selected}), extra=lint_tools(manifest, selected))
     print(render(rows))
     bad = [row for row in rows if row[1] != "ok"]
     if bad:

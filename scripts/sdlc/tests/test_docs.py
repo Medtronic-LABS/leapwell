@@ -196,7 +196,7 @@ class ProcessDocsTest(unittest.TestCase):
     def test_protected_checks_match_script(self):
         script = read(ROOT / "scripts/github/protect_branches.sh")
         sdlc = read(PROCESS / "SDLC.md")
-        for check in ("pr-check", "sdlc-scripts", "secret-scan", "mockup-scan"):
+        for check in ("pr-check", "sdlc-scripts", "lint", "secret-scan", "mockup-scan"):
             self.assertIn(f'"{check}"', script)
             self.assertIn(f"`{check}`", sdlc)
 

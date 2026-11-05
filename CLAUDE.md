@@ -124,6 +124,8 @@ secrets or env values out of other repos. CI (`secret-scan`, `mockup-scan`, `pr-
 - Repo facts come from `repos.json` only (DRY); PHI and secret patterns from `scripts/sdlc/patterns.py`; process
   from `docs/process/SDLC.md`.
 - Python in `scripts/` is stdlib-only (3.11+) with unit tests: `python3 -m unittest discover -s scripts -t .`.
+- Lint rules live in `repos.json` (`lint_rules`, `hub_lint_rules`); the pre-commit hook and CI both run them through
+  `scripts/sdlc/lint_files.py` on changed files only. A failure or a missing tool blocks the commit.
   Shell scripts use `set -euo pipefail` and are dry-run by default.
 - Commits: Conventional Commit subject, issue as `(#N)`. Branches `<type>/<issue#>-<slug>`.
 

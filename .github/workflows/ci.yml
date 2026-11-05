@@ -59,6 +59,33 @@ jobs:
             "$RUNNER_TEMP/gitleaks/gitleaks" git --redact --no-banner
           fi
 
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      RUFF_VERSION: 0.17.3
+      SHELLCHECK_PY_VERSION: 0.11.0.1
+      ACTIONLINT_VERSION: 1.7.12
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install ruff and shellcheck
+        run: pip install "ruff==${RUFF_VERSION}" "shellcheck-py==${SHELLCHECK_PY_VERSION}"
+
+      - name: Install actionlint
+        run: |
+          base="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          mkdir -p "$RUNNER_TEMP/actionlint"
+          curl -sSfL -o "$RUNNER_TEMP/actionlint/$archive" "$base/$archive"
+          curl -sSfL -o "$RUNNER_TEMP/actionlint/checksums.txt" "$base/actionlint_${ACTIONLINT_VERSION}_checksums.txt"
+          (cd "$RUNNER_TEMP/actionlint" && grep " $archive\$" checksums.txt | sha256sum -c -)
+          tar -xzf "$RUNNER_TEMP/actionlint/$archive" -C "$RUNNER_TEMP/actionlint" actionlint
+          echo "$RUNNER_TEMP/actionlint" >> "$GITHUB_PATH"
+
+      # Same rules as the pre-commit hook (hub_lint_rules in repos.json), over every tracked file.
+      - name: Lint Python, shell scripts and workflows
+        run: python3 scripts/sdlc/lint_files.py --all
+
   mockup-scan:
     runs-on: ubuntu-latest
     steps:

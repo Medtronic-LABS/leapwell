@@ -89,6 +89,24 @@ class TestRealManifest(unittest.TestCase):
             self.assertEqual(set(repo.verify), {"test", "lint", "build"}, repo.key)
             self.assertTrue(repo.verify["test"], repo.key)
 
+    def test_lint_rules_lint_only_never_reformat_whole_files(self):
+        runs = {key: [r.run for r in self.manifest.by_key(key).lint_rules] for key in EXPECTED_KEYS}
+        self.assertEqual(runs["mobile"], ["dart analyze"])
+        for key in ("core", "shukhee", "coaching"):
+            self.assertEqual(runs[key], ["ruff check"], key)
+        self.assertEqual(runs["ai"], ["ruff check --isolated"])
+        self.assertEqual(runs["coaching-android"], [])
+        self.assertEqual(runs["coaching-dashboard"], ["npx --no eslint", "npx --no prettier --check"])
+        for key in EXPECTED_KEYS:
+            self.assertFalse(any("--fix" in r or "--write" in r for r in runs[key]), key)
+
+    def test_hub_lint_rules_cover_python_shell_and_workflows(self):
+        runs = {r.run: r.files for r in self.manifest.hub_lint_rules}
+        self.assertEqual(runs["ruff check"], ("*.py",))
+        self.assertEqual(runs["ruff format --check"], ("*.py",))
+        self.assertIn(".githooks/*", runs["shellcheck -S warning -x"])
+        self.assertEqual(runs["actionlint"], (".github/workflows/*.yml",))
+
 
 class TestValidation(unittest.TestCase):
     def test_good_manifest_parses(self):
@@ -107,6 +125,28 @@ class TestValidation(unittest.TestCase):
         ]:
             with self.assertRaisesRegex(ValueError, needle):
                 repos.parse(manifest(good_entry(key="ok"), bad))
+
+    def test_lint_rules_parse_and_default_empty(self):
+        rule = {"files": ["*.py"], "run": "ruff check"}
+        parsed = repos.parse(
+            {**manifest(good_entry(lint_rules=[rule]), good_entry(key="k2", name="n2")), "hub_lint_rules": [rule]}
+        )
+        self.assertEqual(parsed.by_key("k").lint_rules, (repos.LintRule(files=("*.py",), run="ruff check"),))
+        self.assertEqual(parsed.by_key("k2").lint_rules, ())
+        self.assertEqual(parsed.hub_lint_rules, (repos.LintRule(files=("*.py",), run="ruff check"),))
+        self.assertEqual(repos.parse(manifest(good_entry())).hub_lint_rules, ())
+
+    def test_bad_lint_rules_named_in_error(self):
+        for bad in (
+            [{"files": [], "run": "x"}],
+            [{"files": ["*.py"], "run": ""}],
+            [{"files": "*.py", "run": "x"}],
+            "ruff",
+        ):
+            with self.assertRaisesRegex(ValueError, r"broken.*lint_rules"):
+                repos.parse(manifest(good_entry(key="broken", lint_rules=bad)))
+        with self.assertRaisesRegex(ValueError, "hub_lint_rules"):
+            repos.parse({**manifest(good_entry()), "hub_lint_rules": [{"files": ["*"], "run": ""}]})
 
     def test_non_object_entry_names_index(self):
         with self.assertRaisesRegex(ValueError, r"repos\[0\]"):

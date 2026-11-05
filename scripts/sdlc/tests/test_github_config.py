@@ -10,7 +10,7 @@ from scripts.sdlc.patterns import REQUIRED_SECTIONS
 ROOT = Path(__file__).resolve().parents[3]
 GITHUB = ROOT / ".github"
 EXPECTED_JOBS = {
-    "ci.yml": {"sdlc-scripts", "secret-scan", "mockup-scan"},
+    "ci.yml": {"sdlc-scripts", "lint", "secret-scan", "mockup-scan"},
     "pr-check.yml": {"pr-check"},
     "close-parents.yml": {"close-parents"},
     "issue-check.yml": {"issue-check"},

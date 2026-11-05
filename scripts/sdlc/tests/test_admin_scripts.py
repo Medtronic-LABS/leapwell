@@ -123,7 +123,7 @@ class AdminScriptsTest(unittest.TestCase):
 
     def test_protection_values(self):
         out = self.run_script("protect_branches.sh").stdout
-        for check in ["pr-check", "sdlc-scripts", "secret-scan", "mockup-scan"]:
+        for check in ["pr-check", "sdlc-scripts", "lint", "secret-scan", "mockup-scan"]:
             self.assertIn(f'"{check}"', out)
         self.assertIn("repos/Medtronic-LABS/leapwell/branches/main/protection", out)
         self.assertNotIn("develop", out)

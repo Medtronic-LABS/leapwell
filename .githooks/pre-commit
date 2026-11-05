@@ -1,7 +1,9 @@
 #!/bin/sh
-# Block staged secret/config files and credentials in staged content; then chain to the
-# repo's own pre-commit hook. Activated by scripts/workspace/setup.sh.
+# Block staged secret/config files and credentials in staged content, lint the staged files with
+# the repo's lint_rules (repos.json), then chain to the repo's own pre-commit setup.
+# Activated by scripts/workspace/setup.sh.
 set -e
 . "$(dirname "$0")/lib.sh"
 python3 "$LW_ROOT/scripts/sdlc/guard_staged.py"
+python3 "$LW_ROOT/scripts/sdlc/lint_files.py" --staged
 chain_repo_hook pre-commit "$@"

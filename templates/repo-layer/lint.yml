@@ -1,0 +1,36 @@
+# Managed by leapwell (scripts/sync/sync_repos.py). Do not edit here; change it in leapwell and re-sync.
+name: LW lint
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lw-lint-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lw-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/checkout@v7
+        with:
+          repository: {{org}}/{{tracker}}
+          ref: {{leapwell_ref}}
+          path: .leapwell
+          persist-credentials: false
+
+{{lint_setup}}
+      # Lints only the files this PR changes, with this repo's lint_rules in leapwell's repos.json.
+      - name: Lint changed files
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 .leapwell/scripts/sdlc/lint_files.py --base "origin/$BASE_REF"

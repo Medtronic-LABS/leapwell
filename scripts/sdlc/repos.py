@@ -21,6 +21,14 @@ _VERIFY_KEYS = ("test", "lint", "build")
 
 
 @dataclass(frozen=True)
+class LintRule:
+    """Lint command run on the changed files matching `files` (fnmatch globs on repo-relative paths)."""
+
+    files: tuple[str, ...]
+    run: str
+
+
+@dataclass(frozen=True)
 class Repo:
     key: str
     name: str
@@ -30,6 +38,7 @@ class Repo:
     protected_branches: tuple[str, ...]
     verify: dict[str, str]
     notes: str = ""
+    lint_rules: tuple[LintRule, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -38,6 +47,7 @@ class Manifest:
     tracker: str
     project: int
     repos: tuple[Repo, ...]
+    hub_lint_rules: tuple[LintRule, ...] = ()
 
     @property
     def tracker_slug(self) -> str:
@@ -57,6 +67,25 @@ class Manifest:
 
     def protected_branches(self) -> set[str]:
         return {branch for repo in self.repos for branch in repo.protected_branches}
+
+
+def _parse_lint_rules(value: Any, label: str) -> tuple[LintRule, ...]:
+    """Optional list of {"files": [glob, ...], "run": "command"}; absent means no rules."""
+    if value is None:
+        return ()
+    error = f"{label}: 'lint_rules' must be a list of {{'files': [glob, ...], 'run': command}}"
+    if not isinstance(value, list):
+        raise ValueError(error)
+    rules = []
+    for rule in value:
+        files = rule.get("files") if isinstance(rule, dict) else None
+        run = rule.get("run") if isinstance(rule, dict) else None
+        if not isinstance(files, list) or not files or not all(isinstance(f, str) and f for f in files):
+            raise ValueError(error)
+        if not isinstance(run, str) or not run.strip():
+            raise ValueError(error)
+        rules.append(LintRule(files=tuple(files), run=run))
+    return tuple(rules)
 
 
 def _parse_repo(entry: Any, index: int) -> Repo:
@@ -86,6 +115,7 @@ def _parse_repo(entry: Any, index: int) -> Repo:
         integration_branch=entry["integration_branch"],
         protected_branches=tuple(protected),
         verify={k: verify[k] for k in _VERIFY_KEYS},
+        lint_rules=_parse_lint_rules(entry.get("lint_rules"), label),
     )
 
 
@@ -98,7 +128,13 @@ def parse(data: Any) -> Manifest:
     if not isinstance(data["repos"], list):
         raise ValueError("manifest: 'repos' must be a list")
     repos = tuple(_parse_repo(entry, i) for i, entry in enumerate(data["repos"]))
-    return Manifest(org=data["org"], tracker=data["tracker"], project=data["project"], repos=repos)
+    return Manifest(
+        org=data["org"],
+        tracker=data["tracker"],
+        project=data["project"],
+        repos=repos,
+        hub_lint_rules=_parse_lint_rules(data.get("hub_lint_rules"), "manifest (hub_lint_rules)"),
+    )
 
 
 def load(path: os.PathLike | None = None) -> Manifest:

@@ -67,6 +67,7 @@ class TestApply(SyncCase):
             ".github/workflows/lw-pr-check.yml",
             ".github/workflows/lw-secret-scan.yml",
             ".github/workflows/lw-close-on-merge.yml",
+            ".github/workflows/lw-lint.yml",
             ".github/pull_request_template.md",
             ".github/CODEOWNERS",
             "CLAUDE.md",
@@ -85,6 +86,36 @@ class TestApply(SyncCase):
         git(clone, "branch", "-q", "-d", "chore/leapwell-sync")
         self.assertFalse(self.sync(clone).changed)
         self.assertEqual(git(clone, "rev-parse", "--abbrev-ref", "HEAD").strip(), "develop")
+
+    def test_lint_workflow_gets_toolchain_from_lint_commands(self):
+        cases = {
+            "mobile": ("subosito/flutter-action@v2", "flutter pub get"),
+            "core": ("actions/setup-python@v7", f"pip install ruff=={sync_repos.RUFF_VERSION}"),
+            "ai": ("actions/setup-python@v7", f"pip install ruff=={sync_repos.RUFF_VERSION}"),
+            "coaching-dashboard": ("actions/setup-node@v7", "npm ci"),
+        }
+        for key, needles in cases.items():
+            with self.subTest(key=key):
+                repo = MANIFEST.by_key(key)
+                plan = sync_repos.plan_repo(make_clone(self.root / key, name=repo.name), repo, MANIFEST, REF)
+                lint = plan.writes[sync_repos.LINT_WORKFLOW]
+                for needle in needles:
+                    self.assertIn(needle, lint)
+                self.assertIn('lint_files.py --base "origin/$BASE_REF"', lint)
+                self.assertIn("fetch-depth: 0", lint)
+                self.assertNotIn("{{", lint.replace("${{", ""))
+
+    def test_repo_without_lint_rules_gets_no_lint_workflow(self):
+        repo = MANIFEST.by_key("coaching-android")
+        plan = sync_repos.plan_repo(make_clone(self.root, name=repo.name), repo, MANIFEST, REF)
+        self.assertNotIn(sync_repos.LINT_WORKFLOW, plan.writes)
+
+    def test_lint_tool_without_ci_setup_is_refused(self):
+        import dataclasses
+
+        repo = dataclasses.replace(MOBILE, lint_rules=(repos.LintRule(files=("*.kt",), run="ktlint"),))
+        with self.assertRaisesRegex(SyncError, "ktlint"):
+            sync_repos.plan_repo(make_clone(self.root), repo, MANIFEST, REF)
 
     def test_placeholders_are_all_rendered(self):
         clone = make_clone(self.root)

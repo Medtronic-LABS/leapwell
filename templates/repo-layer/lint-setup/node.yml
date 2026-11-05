@@ -1,0 +1,8 @@
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install npm packages
+        run: npm ci
+

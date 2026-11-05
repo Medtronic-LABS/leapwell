@@ -141,15 +141,34 @@ data add `status:needs-info` and one bot comment; fixing the issue removes the l
 | Where | Workflow / job | Gate |
 |---|---|---|
 | leapwell | `ci.yml` / `sdlc-scripts` | `python3 -m unittest discover -s scripts -t .` must pass |
+| leapwell | `ci.yml` / `lint` | `scripts/sdlc/lint_files.py --all` with `hub_lint_rules`: ruff (lint + format), shellcheck, actionlint |
 | leapwell | `ci.yml` / `secret-scan` | gitleaks (`--redact`) on the PR's commit range must be clean |
 | leapwell | `ci.yml` / `mockup-scan` | `scripts/sdlc/scan_text.py mockups wiki` finds no patient data or secrets |
 | leapwell | `pr-check.yml` | issue link present; branch name and sensitive-data checks |
 | leapwell | `issue-check.yml` | issue sections and privacy (labels the issue; not a PR gate) |
 | leapwell | `close-parents.yml` | hourly: closes routed items whose sub-issues are all closed |
 | each code repo | `lw-pr-check`, `lw-secret-scan`, `lw-close-on-merge` | the thin layer from `templates/repo-layer/`; contains no logic, runs leapwell's scripts at a pinned ref |
+| each code repo with `lint_rules` | `lw-lint` | the repo's `lint_rules` on the files the PR changes (`lint_files.py --base`) |
 | each code repo | its own build/test CI | stays in the repo; leapwell does not own it |
 
-Required checks on leapwell `main`: `pr-check`, `sdlc-scripts`, `secret-scan`, `mockup-scan`.
+Required checks on leapwell `main`: `pr-check`, `sdlc-scripts`, `lint`, `secret-scan`, `mockup-scan`.
+
+### Linting and pre-commit
+
+One set of rules drives both the pre-commit hook and CI: `lint_rules` per repo and `hub_lint_rules` for leapwell
+itself, in `repos.json`. `scripts/sdlc/lint_files.py` runs each rule's command on the matching files: staged
+files at commit time (`--staged`), the files a PR changes in CI (`--base`), every tracked file for leapwell's own CI
+(`--all`). Only changed files are checked, so existing lint debt in a repo never blocks a change that does not
+touch it. Rules lint and never reformat whole files: leapwell runs ruff (lint + format check), shellcheck and
+actionlint; mobile `dart analyze`; the Python repos `ruff check` (ai with `--isolated`, as it has no ruff config);
+the dashboard eslint and prettier (after `npm ci`); coaching-android has no linter yet.
+
+A failing rule **or a missing tool blocks the commit** (owner decision 2026-11-05); `/lw-setup` lists the tools
+each area needs. A repo with its own pre-commit setup keeps it: the hook chain runs `.githooks/<hook>`, else
+`.husky/<hook>`, else the pre-commit framework (`.pre-commit-config.yaml`, called directly because
+`pre-commit install` refuses while `core.hooksPath` is set), else `.git/hooks/<hook>`; for those repos the staged
+`lint_rules` step is skipped and CI still runs it. After `npm install` in the dashboard, husky resets the clone's
+`core.hooksPath`; run `/lw-setup --no-clone` again to point it back at leapwell.
 
 Mobile has ratchet budgets (`ANALYZE_ERROR_BUDGET`, `TEST_FAILURE_BUDGET`) in the `flutter` job's `env:` of its
 own `.github/workflows/ci.yml`; that file is the single source of the numbers. Ratchet down, never up: lower a

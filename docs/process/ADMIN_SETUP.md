@@ -37,7 +37,7 @@ bash scripts/github/protect_branches.sh              # leapwell main: 1 approval
 bash scripts/github/protect_branches.sh --apply
 ```
 
-Required checks on leapwell `main`: `pr-check`, `sdlc-scripts`, `secret-scan`, `mockup-scan`. They appear in the
+Required checks on leapwell `main`: `pr-check`, `sdlc-scripts`, `lint`, `secret-scan`, `mockup-scan`. They appear in the
 branch-protection picker only after they have run once; the script sets them by name through the API anyway.
 Until the workflows are on `main` and have run, PRs wait on those checks. Code repos are protected by their own owners.
 
