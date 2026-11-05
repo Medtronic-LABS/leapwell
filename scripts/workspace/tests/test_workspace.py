@@ -20,8 +20,8 @@ GIT_ENV = {
 }
 
 
-def git(cwd, *args, check=True):
-    env = {**os.environ, **GIT_ENV}
+def git(cwd, *args, check=True, extra_env=None):
+    env = {**os.environ, **GIT_ENV, **(extra_env or {})}
     return subprocess.run(["git", *args], cwd=cwd, env=env, capture_output=True, text=True, check=check)
 
 
@@ -43,6 +43,20 @@ class DoctorTests(unittest.TestCase):
         for tool in ("git", "gh", "python3", "flutter", "java", "docker", "node", "npm"):
             self.assertIn(tool, tools)
         self.assertEqual(doctor.required_tools(["Frappe apps"]).get("flutter"), None)
+
+    def test_lint_tools_come_from_repos_json_rules(self):
+        from scripts.sdlc import repos
+
+        manifest = repos.load()
+        tools = doctor.lint_tools(manifest, manifest.repos)
+        self.assertEqual(tools["dart"], {"Mobile app"})
+        self.assertEqual(tools["ruff"], {"workspace", "Frappe apps", "AI Scribe", "Micro-coaching"})
+        self.assertEqual(tools["shellcheck"], {"workspace"})
+        self.assertEqual(tools["actionlint"], {"workspace"})
+        self.assertNotIn("npx", tools)
+        merged = doctor.required_tools(["Frappe apps"], tools)
+        self.assertIn("Frappe apps", merged["ruff"])
+        self.assertIn("pre-commit", merged)
 
     def test_missing_and_ok(self):
         rows = doctor.check(
@@ -159,8 +173,41 @@ class HookTests(WorkspaceCase):
         git(clone, "add", "f.txt")
         return clone
 
-    def commit(self, clone, message):
-        return git(clone, "commit", "-m", message, check=False)
+    def commit(self, clone, message, extra_env=None):
+        return git(clone, "commit", "-m", message, check=False, extra_env=extra_env)
+
+    def fake_pre_commit(self, exit_code=0):
+        tool = self.tmp / "bin" / "pre-commit"
+        tool.parent.mkdir(exist_ok=True)
+        log = self.tmp / "pre-commit.log"
+        tool.write_text(f'#!/bin/sh\necho "$@" >> "{log}"\nexit {exit_code}\n')
+        tool.chmod(0o755)
+        return {"LW_PRE_COMMIT": str(tool)}, log
+
+    def test_chains_to_husky_hook_even_when_not_executable(self):
+        clone = self.clone_with_hooks()
+        (clone / ".husky").mkdir()
+        marker = self.tmp / "husky-ran"
+        (clone / ".husky" / "pre-commit").write_text(f'touch "{marker}"\nexit 1\n')
+        self.assertNotEqual(self.commit(clone, "feat(x): thing").returncode, 0)
+        self.assertTrue(marker.exists())
+
+    def test_runs_pre_commit_framework_for_both_stages(self):
+        clone = self.clone_with_hooks({"README": "b\n", ".pre-commit-config.yaml": "repos: []\n"})
+        env, log = self.fake_pre_commit()
+        done = self.commit(clone, "feat(x): thing", env)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        calls = log.read_text().splitlines()
+        self.assertEqual(calls[0], "run --hook-stage pre-commit")
+        self.assertRegex(calls[1], r"^run --hook-stage commit-msg --commit-msg-filename \S+")
+
+    def test_pre_commit_framework_failure_or_missing_tool_blocks(self):
+        clone = self.clone_with_hooks({"README": "b\n", ".pre-commit-config.yaml": "repos: []\n"})
+        env, _ = self.fake_pre_commit(exit_code=1)
+        self.assertNotEqual(self.commit(clone, "feat(x): thing", env).returncode, 0)
+        done = self.commit(clone, "feat(x): thing", {"LW_PRE_COMMIT": str(self.tmp / "no-such-tool")})
+        self.assertNotEqual(done.returncode, 0)
+        self.assertIn("pre-commit", done.stderr)
 
     def test_bad_subject_rejected_from_clone(self):
         clone = self.clone_with_hooks()
