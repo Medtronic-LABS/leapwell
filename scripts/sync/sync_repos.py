@@ -41,6 +41,9 @@ MARKED_FILES = (
     ("claude-section.md", "CLAUDE.md", MD_MARKERS, "append"),
     ("issue-config.yml", ".github/ISSUE_TEMPLATE/config.yml", YML_MARKERS, "manual"),
 )
+# GitHub also reads these from the repo root and docs/; a clone's existing copy wins over .github/.
+GITHUB_ALT_DIRS = ("", "docs")
+ALT_LOCATION_FILES = frozenset({".github/pull_request_template.md", ".github/CODEOWNERS"})
 
 
 @dataclass
@@ -97,6 +100,35 @@ def _read(clone: Path, rel: str) -> Optional[str]:
         return handle.read()
 
 
+def _existing_spelling(clone: Path, rel: str) -> Optional[str]:
+    """`rel` as the clone spells it (letter case can differ), or None when no such file exists."""
+    target = Path(rel)
+    parent = clone / target.parent
+    if not parent.is_dir():
+        return None
+    for entry in sorted(parent.iterdir()):
+        if entry.name.lower() == target.name.lower() and entry.is_file():
+            return str(target.parent / entry.name)
+    return None
+
+
+def resolve_path(clone: Path, rel: str) -> str:
+    """Where the clone already keeps `rel` (any letter case, GitHub's alternate dirs); else `rel`.
+
+    Writing to the existing file avoids a second copy that differs only in case, which a
+    case-insensitive filesystem merges and git then tracks twice.
+    """
+    candidates = [rel]
+    if rel in ALT_LOCATION_FILES:
+        name = Path(rel).name
+        candidates += [str(Path(directory) / name) for directory in GITHUB_ALT_DIRS]
+    for candidate in candidates:
+        found = _existing_spelling(clone, candidate)
+        if found is not None:
+            return found
+    return rel
+
+
 def marked_region(text: str, markers: tuple[str, str]) -> str:
     """The marker-delimited part of a rendered template (markers included)."""
     match = _marker_re(markers).search(text)
@@ -118,9 +150,11 @@ def plan_repo(clone: Path, repo: repos.Repo, manifest: repos.Manifest, ref: str)
             plan.diffs.append(_diff(rel, old, new))
 
     for name, rel in MANAGED_FILES.items():
+        rel = resolve_path(clone, rel)
         propose(rel, _read(clone, rel), render(_template(name), repo, manifest, ref))
 
     for name, rel in CREATE_ONLY_FILES.items():
+        rel = resolve_path(clone, rel)
         existing = _read(clone, rel)
         if existing is None:
             propose(rel, None, render(_template(name), repo, manifest, ref))
@@ -130,6 +164,7 @@ def plan_repo(clone: Path, repo: repos.Repo, manifest: repos.Manifest, ref: str)
     for name, rel, markers, fallback in MARKED_FILES:
         rendered = render(_template(name), repo, manifest, ref)
         block = marked_region(rendered, markers)
+        rel = resolve_path(clone, rel)
         existing = _read(clone, rel)
         if existing is None:
             propose(rel, None, rendered)

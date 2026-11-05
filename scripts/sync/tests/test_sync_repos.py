@@ -153,6 +153,40 @@ class TestSafety(SyncCase):
         self.assertEqual((clone / ".github/CODEOWNERS").read_text(), "* @someone\n")
         self.assertTrue(any("CODEOWNERS" in n for n in plan.notes))
 
+    def test_existing_pr_template_in_other_case_is_updated_in_place(self):
+        clone = make_clone(self.root, {".github/PULL_REQUEST_TEMPLATE.md": "old\n"})
+        plan = self.sync(clone)
+        self.assertIn(".github/PULL_REQUEST_TEMPLATE.md", plan.writes)
+        self.assertNotIn(".github/pull_request_template.md", plan.writes)
+        tracked = git(clone, "ls-files", ".github").split()
+        self.assertEqual([p for p in tracked if p.lower().endswith("pull_request_template.md")],
+                         [".github/PULL_REQUEST_TEMPLATE.md"])
+        self.assertEqual(git(clone, "status", "--porcelain"), "")
+
+    def test_pr_template_at_root_or_docs_is_updated_there(self):
+        for rel in ("pull_request_template.md", "docs/Pull_Request_Template.md"):
+            with self.subTest(rel=rel):
+                clone = make_clone(self.root / rel.replace("/", "_"), {rel: "old\n"})
+                plan = self.sync(clone)
+                self.assertIn(rel, plan.writes)
+                self.assertFalse((clone / ".github").exists() and any(
+                    p.name.lower() == "pull_request_template.md" for p in (clone / ".github").iterdir()))
+
+    def test_codeowners_at_root_or_docs_is_left_untouched(self):
+        for rel in ("CODEOWNERS", "docs/CODEOWNERS"):
+            with self.subTest(rel=rel):
+                clone = make_clone(self.root / rel.replace("/", "_"), {rel: "* @someone\n"})
+                plan = self.sync(clone)
+                self.assertEqual((clone / rel).read_text(), "* @someone\n")
+                self.assertFalse((clone / ".github/CODEOWNERS").exists())
+                self.assertTrue(any("CODEOWNERS" in n for n in plan.notes))
+
+    def test_claude_md_in_other_case_gets_the_section(self):
+        clone = make_clone(self.root, {"claude.md": "# Own\n"})
+        plan = self.sync(clone)
+        self.assertIn("claude.md", plan.writes)
+        self.assertNotIn("CLAUDE.md", plan.writes)
+
     def test_dirty_clone_refused(self):
         clone = make_clone(self.root)
         (clone / "README.md").write_text("changed\n")
