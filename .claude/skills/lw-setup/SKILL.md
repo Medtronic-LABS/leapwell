@@ -13,6 +13,8 @@ Run from the **leapwell root** (where `repos.json` is). Claude is always started
 1. **Check the place.** `repos.json` and `scripts/workspace/setup.sh` must exist in the current directory. If not, tell the user to `cd` to their leapwell clone and start Claude there.
 
 2. **Run setup.** `bash scripts/workspace/setup.sh $ARGUMENTS`
+   Run each command in this skill as its own Bash call, exactly as written (no `&&`, `;` or `echo`): the skill's
+   allowed tools cover single commands only, so a chained command stops at a permission prompt.
    Options: `--only mobile,core` limits to those repo keys; `--ssh` clones over SSH; `--no-clone` only re-wires hooks on existing clones; `--strict` exits non-zero on any problem.
    The script never resets, pulls, rebases or switches branches in an existing clone - it only fetches. New clones start on the repo's integration branch.
 
