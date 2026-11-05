@@ -13,7 +13,9 @@ changed only by people. Every script below is **dry-run by default**: read the o
 ## 1. Rollout order
 
 1. Seed `main` with the README and `.gitignore`; everything else arrives on `chore/leapwell-hub` as a draft
-   pull request. The owner reviews and merges it.
+   pull request. The owner reviews and merges it. Turn on **Issues** first (Settings → General → Features, or
+   `gh repo edit Medtronic-LABS/leapwell --enable-issues`): the repo was created with Issues off, and nothing can be
+   filed or linked until it is on. Discussions, Wiki and Projects are already on.
 2. On the merged repo run, each first as a dry-run: `scripts/github/sync_labels.sh`,
    `scripts/github/setup_discussions.sh`, `scripts/github/setup_project.sh`, `scripts/github/publish_wiki.sh`,
    `scripts/github/protect_branches.sh` (details below). Upload the `lw-ticket` org skill (section 6).
