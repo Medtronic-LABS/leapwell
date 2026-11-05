@@ -27,6 +27,10 @@ _PATTERNS: dict[str, re.Pattern[str]] = {
     "hf_token": re.compile(r"\bhf_[A-Za-z0-9]{30,}"),
     "github_token": re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})"),
     "google_api_key": re.compile(r"\bAIza[0-9A-Za-z_-]{35}"),
+    "aws_key": re.compile(
+        r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"
+        r"|\b(?i:aws_secret_access_key)[\"']?\s*[:=]\s*[\"']?[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])"
+    ),
     "private_key": re.compile(r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----"),
     "jwt": re.compile(r"\beyJ[A-Za-z0-9_-]{5,}\.eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]+"),
     # Literal-looking values only (contain a digit or symbol), so `password = 'Password'`
@@ -42,7 +46,7 @@ _EMAIL_CATEGORY = "email"
 _NATIONAL_ID_CATEGORY = "national_id"
 
 CREDENTIAL_CATEGORIES = frozenset({
-    "bearer_token", "hf_token", "github_token", "google_api_key",
+    "bearer_token", "hf_token", "github_token", "google_api_key", "aws_key",
     "private_key", "jwt", "password_assignment",
 })
 

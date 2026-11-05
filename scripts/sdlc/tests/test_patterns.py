@@ -70,6 +70,18 @@ class TestFindSensitive(unittest.TestCase):
     def test_google_api_key(self):
         self.assertEqual(find_sensitive("k " + "AIza" + "x" * 35), ["google_api_key"])
 
+    def test_aws_key(self):
+        self.assertEqual(find_sensitive("id " + "AKIA" + "ABCDEFGHIJKLMNOP"), ["aws_key"])
+        self.assertEqual(find_sensitive("id " + "ASIA" + "Q" * 16), ["aws_key"])
+        secret = "aws_secret_access_key = " + "wJalrXUtnFEMI/K7MDENG/" + "b" * 18
+        self.assertEqual(find_sensitive(secret), ["aws_key"])
+
+    def test_aws_key_lookalikes_not_flagged(self):
+        self.assertEqual(find_sensitive("AKIA" + "SHORT1"), [])
+        self.assertEqual(find_sensitive("XAKIA" + "ABCDEFGHIJKLMNOP"), [])
+        self.assertEqual(find_sensitive("asia" + "pacificregion123"), [])
+        self.assertEqual(find_sensitive("aws_secret_access_key = <your-secret>"), [])
+
     def test_private_key(self):
         self.assertEqual(
             find_sensitive("-----BEGIN " + "RSA PRIVATE KEY-----"), ["private_key"]
@@ -113,7 +125,7 @@ class TestFindSensitive(unittest.TestCase):
     def test_credential_categories_exclude_phi(self):
         self.assertEqual(
             CREDENTIAL_CATEGORIES,
-            {"bearer_token", "hf_token", "github_token", "google_api_key",
+            {"bearer_token", "hf_token", "github_token", "google_api_key", "aws_key",
              "private_key", "jwt", "password_assignment"},
         )
 
