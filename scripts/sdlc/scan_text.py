@@ -4,9 +4,10 @@ CLI: python3 scripts/sdlc/scan_text.py <dir>...
 Prints `path:line: category` (never the matched text) and exits 1 on any finding.
 Directories that do not exist are skipped.
 """
+
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Optional
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -31,7 +32,7 @@ def scan_dirs(directories: Iterable[Path]) -> list[tuple[Path, int, list[str]]]:
     return findings
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
     if not args:
         print("usage: scan_text.py <dir>...", file=sys.stderr)

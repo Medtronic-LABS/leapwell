@@ -1,4 +1,5 @@
 """Tests for scripts/github/*.sh: dry-run by default, nothing mutating without --apply."""
+
 import os
 import stat
 import subprocess
@@ -10,8 +11,14 @@ from scripts.sdlc import repos
 
 ROOT = Path(__file__).resolve().parents[3]
 GH_DIR = ROOT / "scripts" / "github"
-ALL = ["sync_labels.sh", "setup_project.sh", "setup_discussions.sh", "publish_wiki.sh",
-       "protect_branches.sh", "package_skill.sh"]
+ALL = [
+    "sync_labels.sh",
+    "setup_project.sh",
+    "setup_discussions.sh",
+    "publish_wiki.sh",
+    "protect_branches.sh",
+    "package_skill.sh",
+]
 # Scripts that print a gh command in dry-run (publish_wiki / package_skill need other inputs).
 GH_DRY_RUN = ["sync_labels.sh", "setup_project.sh", "setup_discussions.sh", "protect_branches.sh"]
 
@@ -23,9 +30,19 @@ def make_fake_gh(directory: Path, log: Path, exit_code: int) -> None:
 
 
 def git(cwd: Path, *args: str) -> None:
-    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True,
-                   env=dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
-                            GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com"))
+    subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        env=dict(
+            os.environ,
+            GIT_AUTHOR_NAME="t",
+            GIT_AUTHOR_EMAIL="t@example.com",
+            GIT_COMMITTER_NAME="t",
+            GIT_COMMITTER_EMAIL="t@example.com",
+        ),
+    )
 
 
 class AdminScriptsTest(unittest.TestCase):
@@ -47,8 +64,9 @@ class AdminScriptsTest(unittest.TestCase):
         self.calls.unlink(missing_ok=True)
 
     def run_script(self, name, *args, env=None):
-        return subprocess.run(["bash", str(GH_DIR / name), *args],
-                              capture_output=True, text=True, env=env or self.env, cwd=ROOT)
+        return subprocess.run(
+            ["bash", str(GH_DIR / name), *args], capture_output=True, text=True, env=env or self.env, cwd=ROOT
+        )
 
     def test_scripts_exist_and_executable(self):
         for name in ALL + ["lib.sh"]:
@@ -152,8 +170,9 @@ class WikiAndPackageTest(unittest.TestCase):
         self.base = Path(self.tmp.name)
 
     def run_script(self, name, *args, **env):
-        return subprocess.run(["bash", str(GH_DIR / name), *args], capture_output=True, text=True,
-                              cwd=ROOT, env=dict(os.environ, **env))
+        return subprocess.run(
+            ["bash", str(GH_DIR / name), *args], capture_output=True, text=True, cwd=ROOT, env=dict(os.environ, **env)
+        )
 
     def wiki_source(self):
         source = self.base / "wiki_src"
@@ -175,8 +194,9 @@ class WikiAndPackageTest(unittest.TestCase):
         return str(remote)
 
     def test_wiki_missing_source_dir_is_clear_error(self):
-        r = self.run_script("publish_wiki.sh", WIKI_SOURCE_DIR=str(self.base / "nope"),
-                            WIKI_URL=str(self.base / "x.git"))
+        r = self.run_script(
+            "publish_wiki.sh", WIKI_SOURCE_DIR=str(self.base / "nope"), WIKI_URL=str(self.base / "x.git")
+        )
         self.assertEqual(r.returncode, 1)
         self.assertIn("No wiki pages found", r.stderr)
 
@@ -203,8 +223,9 @@ class WikiAndPackageTest(unittest.TestCase):
         remote = self.bare_remote(with_content=False)
         r = self.run_script("publish_wiki.sh", "--apply", WIKI_SOURCE_DIR=self.wiki_source(), WIKI_URL=remote)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        files = subprocess.run(["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=remote,
-                               capture_output=True, text=True).stdout.split()
+        files = subprocess.run(
+            ["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=remote, capture_output=True, text=True
+        ).stdout.split()
         self.assertEqual(files, ["Home.md"])
 
     def test_wiki_non_empty_refused_without_force(self):
@@ -215,8 +236,9 @@ class WikiAndPackageTest(unittest.TestCase):
         self.assertIn("Refusing", refused.stderr)
         forced = self.run_script("publish_wiki.sh", "--apply", "--force", **env)
         self.assertEqual(forced.returncode, 0, forced.stdout + forced.stderr)
-        files = subprocess.run(["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=remote,
-                               capture_output=True, text=True).stdout.split()
+        files = subprocess.run(
+            ["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=remote, capture_output=True, text=True
+        ).stdout.split()
         self.assertEqual(sorted(files), ["Home.md", "Old.md"])
 
     def test_package_skill_missing_dir_exits_one(self):

@@ -1,4 +1,5 @@
 """Structure checks for the committed Claude toolkit (.claude/ agents and skills)."""
+
 import json
 import re
 import subprocess
@@ -36,10 +37,19 @@ HUB_SKILLS = {"lw-setup", "lw-route", "lw-promote", "lw-wiki"}
 MANUAL_SKILLS = WORKFLOW_SKILLS | HUB_SKILLS
 AREA_STATUS_SKILLS = {"lw-frappe-status", "lw-ai-status", "lw-coaching-status"}
 AREA_ACTION_SKILLS = {
-    "lw-mobile-start", "lw-mobile-fresh-launch", "lw-mobile-e2e", "lw-mobile-release",
-    "lw-frappe-setup", "lw-frappe-start", "lw-frappe-stop",
-    "lw-ai-start", "lw-ai-stop", "lw-ai-test",
-    "lw-coaching-start", "lw-coaching-stop", "lw-coaching-android-build",
+    "lw-mobile-start",
+    "lw-mobile-fresh-launch",
+    "lw-mobile-e2e",
+    "lw-mobile-release",
+    "lw-frappe-setup",
+    "lw-frappe-start",
+    "lw-frappe-stop",
+    "lw-ai-start",
+    "lw-ai-stop",
+    "lw-ai-test",
+    "lw-coaching-start",
+    "lw-coaching-stop",
+    "lw-coaching-android-build",
 }
 AREA_SKILLS = AREA_ACTION_SKILLS | AREA_STATUS_SKILLS
 ALL_SKILLS = MANUAL_SKILLS | AREA_SKILLS | {"lw-ticket"}
@@ -69,7 +79,7 @@ def frontmatter(path):
         key, sep, value = line.partition(":")
         if sep and not line.startswith(" "):
             meta[key.strip()] = value.strip()
-    return meta, text[end + 5:]
+    return meta, text[end + 5 :]
 
 
 def skill(name):
@@ -105,8 +115,25 @@ class SettingsTest(unittest.TestCase):
     def test_pre_approved_commands_are_read_only(self):
         settings = json.loads((CLAUDE / "settings.json").read_text(encoding="utf-8"))
         self.assertEqual(set(settings["permissions"]), {"allow"})
-        writes = ("push", "commit", "merge", "tag", "release", "create", "edit", "close", "delete", "api",
-                  "apply", "reset", "checkout", "switch", "rm", "branch -D", "branch -d")
+        writes = (
+            "push",
+            "commit",
+            "merge",
+            "tag",
+            "release",
+            "create",
+            "edit",
+            "close",
+            "delete",
+            "api",
+            "apply",
+            "reset",
+            "checkout",
+            "switch",
+            "rm",
+            "branch -D",
+            "branch -d",
+        )
         for rule in settings["permissions"]["allow"]:
             self.assertRegex(rule, r"^Bash\(.+\)$", rule)
             self.assertFalse(any(w in rule for w in writes), rule)
@@ -148,8 +175,14 @@ class AgentsTest(unittest.TestCase):
         self.assertIn(".claude/references/frappe-review-checklist.md", body)
         self.assertTrue(FRAPPE_CHECKLIST.is_file())
         checklist = FRAPPE_CHECKLIST.read_text(encoding="utf-8")
-        for needle in ("@frappe.whitelist()", "allow_guest=True", "ignore_permissions=True",
-                       "frappe.db.sql", "patches.txt", "Password"):
+        for needle in (
+            "@frappe.whitelist()",
+            "allow_guest=True",
+            "ignore_permissions=True",
+            "frappe.db.sql",
+            "patches.txt",
+            "Password",
+        ):
             self.assertIn(needle, checklist)
 
 
@@ -231,14 +264,25 @@ class AreaSkillsTest(unittest.TestCase):
             self.assertIn("repos/uhis_lf_mobile", body, name)
             self.assertIn("env.", body, name)
         _, release = skill("lw-mobile-release")
-        for needle in ("dev", "training", "playstore", "scripts/release.sh", "libapp.so",
-                       "never commits, pushes, merges, tags", "Play Console"):
+        for needle in (
+            "dev",
+            "training",
+            "playstore",
+            "scripts/release.sh",
+            "libapp.so",
+            "never commits, pushes, merges, tags",
+            "Play Console",
+        ):
             self.assertIn(needle, release)
         self.assertEqual(skill("lw-mobile-release")[0].get("argument-hint"), "<dev|training|playstore>")
 
     def test_frappe_skills_drive_the_env_script(self):
-        flags = {"lw-frappe-setup": "frappe_setup.sh`", "lw-frappe-start": "--start",
-                 "lw-frappe-stop": "--stop", "lw-frappe-status": "--status"}
+        flags = {
+            "lw-frappe-setup": "frappe_setup.sh`",
+            "lw-frappe-start": "--start",
+            "lw-frappe-stop": "--stop",
+            "lw-frappe-status": "--status",
+        }
         for name, needle in flags.items():
             self.assertIn("env/frappe/frappe_setup.sh", skill(name)[1], name)
             self.assertIn(needle, skill(name)[1], name)
@@ -256,12 +300,24 @@ class AreaSkillsTest(unittest.TestCase):
 
     def test_coaching_skills_use_documented_commands(self):
         start = skill("lw-coaching-start")[1]
-        for needle in ("repos/spice-coaching", "repos/spice-coaching-dashboard-ui", "docker compose up --build",
-                       "uv sync --locked --all-packages --group dev", "npm run dev", "/medtronics-api/ready"):
+        for needle in (
+            "repos/spice-coaching",
+            "repos/spice-coaching-dashboard-ui",
+            "docker compose up --build",
+            "uv sync --locked --all-packages --group dev",
+            "npm run dev",
+            "/medtronics-api/ready",
+        ):
             self.assertIn(needle, start)
         android = skill("lw-coaching-android-build")[1]
-        for needle in ("repos/spice-coaching-android", ":sdk-android:assembleDebug", ":app:assembleDebug",
-                       ":sdk-android:test", "publishToMavenLocal", "Never run `./gradlew :sdk-android:publish`"):
+        for needle in (
+            "repos/spice-coaching-android",
+            ":sdk-android:assembleDebug",
+            ":app:assembleDebug",
+            ":sdk-android:test",
+            "publishToMavenLocal",
+            "Never run `./gradlew :sdk-android:publish`",
+        ):
             self.assertIn(needle, android)
 
     def test_area_skills_name_no_secret_env_values(self):
@@ -273,8 +329,14 @@ class AreaSkillsTest(unittest.TestCase):
 
 class FrappeEnvTest(unittest.TestCase):
     def test_files_present(self):
-        for rel in ("docker-compose.yml", "frappe_setup.sh", ".env.example", "README.md",
-                    "docker/backend-v16/Dockerfile", "nginx/frappe.conf.template"):
+        for rel in (
+            "docker-compose.yml",
+            "frappe_setup.sh",
+            ".env.example",
+            "README.md",
+            "docker/backend-v16/Dockerfile",
+            "nginx/frappe.conf.template",
+        ):
             self.assertTrue((FRAPPE_ENV / rel).is_file(), rel)
 
     def test_setup_script_syntax(self):
@@ -282,8 +344,12 @@ class FrappeEnvTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_help_runs_without_docker_or_env_file(self):
-        result = subprocess.run(["bash", str(FRAPPE_ENV / "frappe_setup.sh"), "--help"],
-                                capture_output=True, text=True, env={"PATH": "/usr/bin:/bin"})
+        result = subprocess.run(
+            ["bash", str(FRAPPE_ENV / "frappe_setup.sh"), "--help"],
+            capture_output=True,
+            text=True,
+            env={"PATH": "/usr/bin:/bin"},
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         for flag in ("--start", "--stop", "--restart", "--status"):
             self.assertIn(flag, result.stdout)
@@ -310,8 +376,7 @@ class FrappeEnvTest(unittest.TestCase):
             self.assertRegex(text, rf"(?m)^{key}=")
         self.assertEqual(text.count("change-me-local-only"), 2)
         for name in ("docker-compose.yml", "frappe_setup.sh"):
-            self.assertNotRegex((FRAPPE_ENV / name).read_text(encoding="utf-8"),
-                                r"Admin@|:-123\b")
+            self.assertNotRegex((FRAPPE_ENV / name).read_text(encoding="utf-8"), r"Admin@|:-123\b")
 
     def test_data_dir_is_gitignored(self):
         self.assertIn("/env/frappe/development/", (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines())
@@ -343,16 +408,28 @@ class HubSkillsTest(unittest.TestCase):
 
     def test_promote_flow(self):
         _, body = skill("lw-promote")
-        for needle in ("gh api graphql", "discussion(number:", "addDiscussionComment",
-                       ".claude/skills/lw-ticket/references/feature.md", "python3 scripts/sdlc/check_issue.py",
-                       "--label type:feature", "gh project item-add 4 --owner Medtronic-LABS"):
+        for needle in (
+            "gh api graphql",
+            "discussion(number:",
+            "addDiscussionComment",
+            ".claude/skills/lw-ticket/references/feature.md",
+            "python3 scripts/sdlc/check_issue.py",
+            "--label type:feature",
+            "gh project item-add 4 --owner Medtronic-LABS",
+        ):
             self.assertIn(needle, body)
 
     def test_wiki_flow(self):
         _, body = skill("lw-wiki")
-        for needle in (f"https://github.com/{TRACKER}.wiki.git", "python3 scripts/sdlc/scan_text.py",
-                       "diff", "push origin HEAD:<wiki-branch>", "symbolic-ref --short HEAD",
-                       ".superpowers/wiki", "docs/process/"):
+        for needle in (
+            f"https://github.com/{TRACKER}.wiki.git",
+            "python3 scripts/sdlc/scan_text.py",
+            "diff",
+            "push origin HEAD:<wiki-branch>",
+            "symbolic-ref --short HEAD",
+            ".superpowers/wiki",
+            "docs/process/",
+        ):
             self.assertIn(needle, body)
         self.assertLess(body.index(" diff"), body.index("push origin HEAD"))
         self.assertNotIn("mktemp", body)
@@ -384,10 +461,18 @@ class TicketSkillTest(unittest.TestCase):
 
     def test_flow_essentials(self):
         for needle in (
-            "gh issue list", "--body-file", "gh project item-add 4 --owner Medtronic-LABS",
-            f"gh issue create --repo {TRACKER}", "issue_write", "issues/new?template=",
+            "gh issue list",
+            "--body-file",
+            "gh project item-add 4 --owner Medtronic-LABS",
+            f"gh issue create --repo {TRACKER}",
+            "issue_write",
+            "issues/new?template=",
             f"https://github.com/{TRACKER}/security/advisories/new",
-            "AskUserQuestion", "adb devices", "prio:", "env:", "status:triage",
+            "AskUserQuestion",
+            "adb devices",
+            "prio:",
+            "env:",
+            "status:triage",
         ):
             self.assertIn(needle, self.body)
 

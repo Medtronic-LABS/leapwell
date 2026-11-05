@@ -1,4 +1,5 @@
 """Tests for scripts.sdlc.commit_msg."""
+
 import contextlib
 import io
 import tempfile
@@ -11,10 +12,24 @@ from scripts.sdlc import commit_msg
 class TestCheck(unittest.TestCase):
     def test_passes(self):
         for msg in [
-            "feat: add thing", "fix(auth): handle 401", "chore!: drop api", "docs(sdlc): x\n\nbody",
-            "perf: faster", "revert: undo", "build: x", "ci: x", "style: x", "test: x", "refactor: x",
-            "Update login #12", "#12 tidy up", "Merge branch 'a' into b", "Merge pull request #1 from x/y",
-            'Revert "feat: x"', "fixup! feat: x", "squash! fix: y",
+            "feat: add thing",
+            "fix(auth): handle 401",
+            "chore!: drop api",
+            "docs(sdlc): x\n\nbody",
+            "perf: faster",
+            "revert: undo",
+            "build: x",
+            "ci: x",
+            "style: x",
+            "test: x",
+            "refactor: x",
+            "Update login #12",
+            "#12 tidy up",
+            "Merge branch 'a' into b",
+            "Merge pull request #1 from x/y",
+            'Revert "feat: x"',
+            "fixup! feat: x",
+            "squash! fix: y",
         ]:
             self.assertIsNone(commit_msg.check(msg), msg)
 

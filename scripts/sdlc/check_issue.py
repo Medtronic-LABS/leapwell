@@ -5,13 +5,13 @@ CLI: python3 scripts/sdlc/check_issue.py --event "$GITHUB_EVENT_PATH" [--scan-on
 are not intake issues, e.g. routed sub-issues).
 Prints JSON {"ok", "comment", "marker", "needs_info_label"} and exits 0; the workflow decides labels.
 """
+
 import argparse
 import json
 import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -37,7 +37,7 @@ AREA_PREFIX = "area:"
 
 @dataclass
 class IssueResult:
-    issue_type: Optional[str]
+    issue_type: str | None
     missing: list[str] = field(default_factory=list)
     privacy_unchecked: bool = False
     sensitive: list[str] = field(default_factory=list)
@@ -53,11 +53,11 @@ def parse_sections(body: str) -> dict[str, str]:
     sections: dict[str, str] = {}
     for index, match in enumerate(matches):
         end = matches[index + 1].start() if index + 1 < len(matches) else len(body)
-        sections[match.group(1)] = body[match.end():end].strip()
+        sections[match.group(1)] = body[match.end() : end].strip()
     return sections
 
 
-def detect_type(title: str, labels: list[str]) -> Optional[str]:
+def detect_type(title: str, labels: list[str]) -> str | None:
     for label, issue_type in TYPE_LABELS.items():
         if label in labels:
             return issue_type
@@ -123,7 +123,7 @@ def render_comment(result: IssueResult) -> str:
     return "\n".join(lines)
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--event", required=True, help="path to the GitHub event JSON")
     parser.add_argument("--scan-only", action="store_true", help="only scan for sensitive data")
@@ -132,12 +132,16 @@ def main(argv: Optional[list[str]] = None) -> int:
     labels = [label["name"] for label in issue.get("labels") or []]
     title, body = issue.get("title") or "", issue.get("body") or ""
     result = scan_only(title, body) if args.scan_only else evaluate(title, body, labels)
-    print(json.dumps({
-        "ok": result.ok,
-        "comment": render_comment(result),
-        "marker": COMMENT_MARKER,
-        "needs_info_label": NEEDS_INFO_LABEL,
-    }))
+    print(
+        json.dumps(
+            {
+                "ok": result.ok,
+                "comment": render_comment(result),
+                "marker": COMMENT_MARKER,
+                "needs_info_label": NEEDS_INFO_LABEL,
+            }
+        )
+    )
     return 0
 
 

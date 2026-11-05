@@ -8,12 +8,13 @@ An item is closed only if it is open, labelled `status:routed`, has at least one
 sub-issue, every sub-issue is readable, and every sub-issue is closed (any
 state_reason, so "not planned" counts).
 """
+
 import argparse
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -70,7 +71,7 @@ def list_routed(repo: str, gh: GhRunner) -> list[dict]:
     return [issue for issue in _json_pages(out) if "pull_request" not in issue]
 
 
-def fetch_subs(repo: str, number: int, gh: GhRunner) -> Optional[list[dict]]:
+def fetch_subs(repo: str, number: int, gh: GhRunner) -> list[dict] | None:
     """Sub-issues of an issue, or None when they cannot be read (fail safe)."""
     try:
         return _json_pages(gh(["api", "--paginate", f"repos/{repo}/issues/{number}/sub_issues?per_page=100"]))
@@ -78,7 +79,7 @@ def fetch_subs(repo: str, number: int, gh: GhRunner) -> Optional[list[dict]]:
         return None
 
 
-def unreadable_count(parent: dict, subs: Optional[list[dict]]) -> int:
+def unreadable_count(parent: dict, subs: list[dict] | None) -> int:
     """Sub-issues we cannot account for: a failed fetch, a missing summary, or fewer visible than the parent's total."""
     if subs is None:
         return 1
@@ -120,7 +121,7 @@ def process(repo: str, apply: bool, gh: GhRunner = run_gh) -> list[int]:
     return closable
 
 
-def main(argv: Optional[list[str]] = None, gh: GhRunner = run_gh) -> int:
+def main(argv: list[str] | None = None, gh: GhRunner = run_gh) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=None, help="owner/name (default: the manifest tracker)")
     parser.add_argument("--apply", action="store_true", help="actually comment and close (default is dry run)")

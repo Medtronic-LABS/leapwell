@@ -1,4 +1,5 @@
 """Tests for scripts.sdlc.repos and the real repos.json."""
+
 import json
 import os
 import tempfile
@@ -11,15 +12,25 @@ from scripts.sdlc.patterns import TRACKER_SLUG
 
 EXPECTED_KEYS = ["mobile", "core", "shukhee", "ai", "coaching", "coaching-android", "coaching-dashboard"]
 INTEGRATION = {
-    "mobile": "develop", "core": "main", "shukhee": "main", "ai": "develop",
-    "coaching": "leapwell-main", "coaching-android": "leapwell-main", "coaching-dashboard": "leapwell-main",
+    "mobile": "develop",
+    "core": "main",
+    "shukhee": "main",
+    "ai": "develop",
+    "coaching": "leapwell-main",
+    "coaching-android": "leapwell-main",
+    "coaching-dashboard": "leapwell-main",
 }
 
 
 def good_entry(**over):
     entry = {
-        "key": "k", "name": "n", "area": "a", "stack": "s", "integration_branch": "main",
-        "protected_branches": ["main"], "verify": {"test": "t", "lint": "l", "build": "b"},
+        "key": "k",
+        "name": "n",
+        "area": "a",
+        "stack": "s",
+        "integration_branch": "main",
+        "protected_branches": ["main"],
+        "verify": {"test": "t", "lint": "l", "build": "b"},
     }
     entry.update(over)
     return entry
@@ -123,6 +134,7 @@ class TestCli(unittest.TestCase):
     def run_main(self, *argv):
         import contextlib
         import io
+
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             code = repos.main(list(argv))

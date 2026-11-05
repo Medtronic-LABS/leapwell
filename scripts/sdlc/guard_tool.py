@@ -3,6 +3,7 @@
 Reads the hook payload JSON on stdin. On deny, prints the reason to stderr and
 exits 2; otherwise exits 0 silently. Malformed input is always allowed.
 """
+
 import fnmatch
 import json
 import os
@@ -10,8 +11,9 @@ import re
 import shlex
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, NamedTuple, Optional
+from typing import Any, NamedTuple
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -19,7 +21,7 @@ if __package__ in (None, ""):
 from scripts.sdlc import repos
 from scripts.sdlc.patterns import is_protected_path  # noqa: E402
 
-BranchResolver = Callable[[str], Optional[str]]
+BranchResolver = Callable[[str], str | None]
 
 FALLBACK_PROTECTED_BRANCHES = {"main", "develop"}
 FILE_TOOLS = {"Read", "Edit", "Write"}
@@ -27,10 +29,53 @@ DISPLAY_COMMANDS = {"cat", "less", "more", "head", "tail", "bat", "nl", "xxd", "
 # Programs that print, copy, send or load a file they are given. Build tools that only consume an
 # env file (flutter --dart-define-from-file, docker compose --env-file) are deliberately absent.
 READ_COMMANDS = DISPLAY_COMMANDS | {
-    "grep", "egrep", "fgrep", "rg", "ag", "sed", "awk", "gawk", "jq", "yq", "cut", "sort", "uniq", "tr",
-    "diff", "cmp", "comm", "od", "hexdump", "cp", "mv", "scp", "rsync", "tee", "dd", "zip", "tar", "gzip",
-    "vi", "vim", "nvim", "nano", "emacs", "code", "open", "curl", "wget", "source", ".",
-    "python", "python3", "node", "ruby", "perl", "php", "deno", "bun",
+    "grep",
+    "egrep",
+    "fgrep",
+    "rg",
+    "ag",
+    "sed",
+    "awk",
+    "gawk",
+    "jq",
+    "yq",
+    "cut",
+    "sort",
+    "uniq",
+    "tr",
+    "diff",
+    "cmp",
+    "comm",
+    "od",
+    "hexdump",
+    "cp",
+    "mv",
+    "scp",
+    "rsync",
+    "tee",
+    "dd",
+    "zip",
+    "tar",
+    "gzip",
+    "vi",
+    "vim",
+    "nvim",
+    "nano",
+    "emacs",
+    "code",
+    "open",
+    "curl",
+    "wget",
+    "source",
+    ".",
+    "python",
+    "python3",
+    "node",
+    "ruby",
+    "perl",
+    "php",
+    "deno",
+    "bun",
 }
 REDIRECTS = {"<", ">", ">>"}
 GIT_READ_SUBCOMMANDS = {"show", "cat-file", "diff", "grep", "log", "blame"}
@@ -55,10 +100,16 @@ PUSH_ALL_FLAGS = {"--all", "--mirror"}
 GREP_DENY = "Searching secret/config files (env*.json, key.properties, keystores, .env) is blocked."
 # Representative secret/config file names; a Grep glob matching any of them is denied.
 PROTECTED_SAMPLE_PATHS = (
-    "env.production.json", "env.training.json", "env.development.json",
-    "android/key.properties", "android/app/upload.jks", "android/app/release.keystore",
-    "android/app/google-services.json", "ios/Runner/GoogleService-Info.plist",
-    ".env", ".env.local",
+    "env.production.json",
+    "env.training.json",
+    "env.development.json",
+    "android/key.properties",
+    "android/app/upload.jks",
+    "android/app/release.keystore",
+    "android/app/google-services.json",
+    "ios/Runner/GoogleService-Info.plist",
+    ".env",
+    ".env.local",
 )
 GH_REPO_VALUE_OPTS = {"-R", "--repo"}
 GH_RELEASE_WRITES = {"create", "edit", "delete", "upload", "delete-asset"}
@@ -68,7 +119,7 @@ MUTATING_METHODS = {"PUT", "POST", "PATCH", "DELETE"}
 TAG_LIST_LONG = ("--list", "--verify", "--contains", "--points-at", "--merged", "--no-merged")
 TAG_PUSH_LONG = ("--tags", "--follow-tags")
 _PROTECTION_PATH_RE = re.compile(r"(^|/)repos/[^/]+/[^/]+/(branches/.+/protection|rulesets)(/|$|\?)")
-_ENV_ASSIGN_RE =re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+_ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 _SHORT_CLUSTER_RE = re.compile(r"^-[A-Za-z]+$")
 
 
@@ -80,11 +131,13 @@ def protected_branches() -> set[str]:
         return set(FALLBACK_PROTECTED_BRANCHES)
 
 
-def git_current_branch(cwd: str) -> Optional[str]:
+def git_current_branch(cwd: str) -> str | None:
     try:
         done = subprocess.run(
             ["git", "-C", cwd, "rev-parse", "--abbrev-ref", "HEAD"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -128,15 +181,15 @@ def strip_prefixes(segment: list[str]) -> list[str]:
 
 class GitInvocation(NamedTuple):
     config: list[str]
-    directory: Optional[str]
-    subcommand: Optional[str]
+    directory: str | None
+    subcommand: str | None
     args: list[str]
 
 
 def parse_git(args: list[str]) -> GitInvocation:
     """Split the args after `git` into global options, subcommand and its args."""
     config: list[str] = []
-    directory: Optional[str] = None
+    directory: str | None = None
     index = 0
     while index < len(args) and args[index].startswith("-"):
         option = args[index]
@@ -148,7 +201,7 @@ def parse_git(args: list[str]) -> GitInvocation:
         index += 2 if option in GIT_OPTS_WITH_VALUE else 1
     if index >= len(args):
         return GitInvocation(config, directory, None, [])
-    return GitInvocation(config, directory, args[index], args[index + 1:])
+    return GitInvocation(config, directory, args[index], args[index + 1 :])
 
 
 def _has_short_flag(args: list[str], flag: str) -> bool:
@@ -164,7 +217,7 @@ def _note_unknown_branch() -> None:
     print("lw-guard: could not determine current branch; bare push allowed", file=sys.stderr)
 
 
-def check_push(args: list[str], cwd: str, current_branch: BranchResolver) -> Optional[str]:
+def check_push(args: list[str], cwd: str, current_branch: BranchResolver) -> str | None:
     if any(a.startswith(PUSH_FORCE_LONG) for a in args) or _has_short_flag(args, "f"):
         return "Force-push is blocked. Push your feature branch normally."
     positionals = [a for a in args if not a.startswith("-")]
@@ -181,7 +234,10 @@ def check_push(args: list[str], cwd: str, current_branch: BranchResolver) -> Opt
     if branch is None and (not refspecs or "HEAD" in refspecs):
         _note_unknown_branch()
     if targets & protected_branches():
-        return "Direct pushes to protected branches (main, develop, integration branches) are blocked. Push a feature branch and open a PR."
+        return (
+            "Direct pushes to protected branches (main, develop, integration branches) are blocked. "
+            "Push a feature branch and open a PR."
+        )
     return None
 
 
@@ -213,7 +269,7 @@ def _gh_api_method(args: list[str]) -> str:
     return "GET"
 
 
-def check_gh(args: list[str]) -> Optional[str]:
+def check_gh(args: list[str]) -> str | None:
     words = gh_positionals(args)
     head = words[:2]
     if head == ["pr", "merge"]:
@@ -229,7 +285,7 @@ def check_gh(args: list[str]) -> Optional[str]:
     return None
 
 
-def check_git_tag(args: list[str]) -> Optional[str]:
+def check_git_tag(args: list[str]) -> str | None:
     if any(a in ("-d", "--delete", "-f", "--force") for a in args) or _has_short_flag(args, "d"):
         return "humans only: deleting or moving git tags is blocked."
     is_listing = (
@@ -264,11 +320,9 @@ def commit_skips_hooks(args: list[str]) -> bool:
     return False
 
 
-def check_git(args: list[str], cwd: str, current_branch: BranchResolver) -> Optional[str]:
+def check_git(args: list[str], cwd: str, current_branch: BranchResolver) -> str | None:
     git = parse_git(args)
-    if git.subcommand in ("commit", "push") and any(
-        c.lower().startswith("core.hookspath") for c in git.config
-    ):
+    if git.subcommand in ("commit", "push") and any(c.lower().startswith("core.hookspath") for c in git.config):
         return "Overriding core.hooksPath is blocked (it bypasses the repo hooks)."
     if git.subcommand == "commit" and commit_skips_hooks(git.args):
         return "Skipping hooks (-n / --no-verify) is blocked."
@@ -289,10 +343,7 @@ def check_git(args: list[str], cwd: str, current_branch: BranchResolver) -> Opti
 def mentions_protected_path(tokens: list[str]) -> bool:
     """True when a token, or a path-like piece of one (code, `ref:path`, `opt=path`), is a secret file."""
     return any(
-        is_protected_path(piece)
-        for token in tokens
-        for piece in [token, *_PATH_PIECE_SPLIT_RE.split(token)]
-        if piece
+        is_protected_path(piece) for token in tokens for piece in [token, *_PATH_PIECE_SPLIT_RE.split(token)] if piece
     )
 
 
@@ -313,12 +364,11 @@ def searches_ignored_files(program: str, args: list[str]) -> bool:
             for index, arg in enumerate(args)
         )
     if program == "rg":
-        return any(arg.startswith(RG_UNIGNORE_LONG) or (_SHORT_CLUSTER_RE.match(arg) and "u" in arg)
-                   for arg in args)
+        return any(arg.startswith(RG_UNIGNORE_LONG) or (_SHORT_CLUSTER_RE.match(arg) and "u" in arg) for arg in args)
     return False
 
 
-def check_segment(segment: list[str], cwd: str, current_branch: BranchResolver) -> Optional[str]:
+def check_segment(segment: list[str], cwd: str, current_branch: BranchResolver) -> str | None:
     segment = strip_prefixes(_drop_group_openers(segment))
     if not segment:
         return None
@@ -340,7 +390,7 @@ def check_segment(segment: list[str], cwd: str, current_branch: BranchResolver) 
     return None
 
 
-def check_command(command: str, cwd: str, current_branch: BranchResolver) -> Optional[str]:
+def check_command(command: str, cwd: str, current_branch: BranchResolver) -> str | None:
     for segment in split_segments(tokenize(command)):
         reason = check_segment(segment, cwd, current_branch)
         if reason:
@@ -383,7 +433,7 @@ def glob_targets_protected(glob: str) -> bool:
     )
 
 
-def check_grep(tool_input: dict) -> Optional[str]:
+def check_grep(tool_input: dict) -> str | None:
     path = tool_input.get("path")
     if isinstance(path, str) and is_protected_path(path):
         return GREP_DENY
@@ -393,7 +443,7 @@ def check_grep(tool_input: dict) -> Optional[str]:
     return None
 
 
-def check_glob(tool_input: dict) -> Optional[str]:
+def check_glob(tool_input: dict) -> str | None:
     path = tool_input.get("path")
     if isinstance(path, str) and is_protected_path(path):
         return GREP_DENY
@@ -403,7 +453,7 @@ def check_glob(tool_input: dict) -> Optional[str]:
     return None
 
 
-def decide(payload: Any, *, current_branch: BranchResolver = git_current_branch) -> Optional[str]:
+def decide(payload: Any, *, current_branch: BranchResolver = git_current_branch) -> str | None:
     """Return a deny reason for the hook payload, or None to allow."""
     if not isinstance(payload, dict):
         return None

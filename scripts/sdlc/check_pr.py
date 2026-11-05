@@ -3,12 +3,12 @@
 CLI: python3 scripts/sdlc/check_pr.py --event "$GITHUB_EVENT_PATH"
 Exits 1 (printing reasons, never matched values) when the PR is not ok.
 """
+
 import argparse
 import json
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -38,7 +38,9 @@ def evaluate(body: str, head_ref: str) -> PrResult:
 def describe(result: PrResult) -> list[str]:
     lines = []
     if not result.has_issue_ref:
-        lines.append("PR body must link an issue, e.g. 'Closes #12', or 'Closes Medtronic-LABS/leapwell#12' from a code repo.")
+        lines.append(
+            "PR body must link an issue, e.g. 'Closes #12', or 'Closes Medtronic-LABS/leapwell#12' from a code repo."
+        )
     if result.sensitive:
         lines.append("Possible sensitive data in PR body (types only): " + ", ".join(result.sensitive))
     if not result.branch_ok:
@@ -46,7 +48,7 @@ def describe(result: PrResult) -> list[str]:
     return lines
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--event", required=True, help="path to the GitHub event JSON")
     args = parser.parse_args(argv)

@@ -2,11 +2,12 @@
 
 Informational (exit 0) unless --strict. `which` and `run` are injectable for tests.
 """
+
 import argparse
 import shutil
 import subprocess
 import sys
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from scripts.sdlc import repos
 
@@ -19,7 +20,7 @@ AREA_TOOLS = {
     "Micro-coaching": ("docker", "node", "npm", "java"),
 }
 
-Which = Callable[[str], Optional[str]]
+Which = Callable[[str], str | None]
 Run = Callable[[list[str]], int]
 
 
@@ -39,8 +40,9 @@ def required_tools(areas: list[str]) -> dict[str, list[str]]:
     return {tool: sorted(reasons) for tool, reasons in needs.items()}
 
 
-def check(areas: list[str], which: Which = shutil.which, run: Run = _run,
-          python_version: tuple = tuple(sys.version_info[:2])) -> list[tuple[str, str, str]]:
+def check(
+    areas: list[str], which: Which = shutil.which, run: Run = _run, python_version: tuple = tuple(sys.version_info[:2])
+) -> list[tuple[str, str, str]]:
     """Rows of (tool, status, detail); status is 'ok', 'MISSING' or 'FAIL'."""
     rows = []
     for tool, reasons in required_tools(areas).items():
@@ -48,7 +50,7 @@ def check(areas: list[str], which: Which = shutil.which, run: Run = _run,
         if which(tool) is None:
             rows.append((tool, "MISSING", detail))
         elif tool == "python3" and tuple(python_version) < MIN_PYTHON:
-            rows.append((tool, "FAIL", "python >= %d.%d required" % MIN_PYTHON))
+            rows.append((tool, "FAIL", "python >= {}.{} required".format(*MIN_PYTHON)))
         elif tool == "gh" and run(["gh", "auth", "status"]) != 0:
             rows.append((tool, "FAIL", "not authenticated: run `gh auth login`"))
         else:
@@ -61,7 +63,7 @@ def render(rows: list[tuple[str, str, str]]) -> str:
     return "\n".join(f"{tool.ljust(width)}  {status.ljust(7)}  {detail}" for tool, status, detail in rows)
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Check tools needed by the LeapWell repos")
     parser.add_argument("--only", default="", help="comma-separated repo keys (default: all)")
     parser.add_argument("--strict", action="store_true", help="exit 1 if anything is missing")

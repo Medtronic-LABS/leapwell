@@ -1,0 +1,6 @@
+# leapwell's own Python (scripts/). Code repos keep their own ruff config.
+target-version = "py311"
+line-length = 120
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP"]

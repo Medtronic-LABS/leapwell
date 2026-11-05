@@ -1,4 +1,5 @@
 """Tests for scripts.sdlc.check_pr."""
+
 import contextlib
 import io
 import json

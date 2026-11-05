@@ -2,15 +2,13 @@
 
 CLI: python3 scripts/sdlc/commit_msg.py <message-file>   (exits 1 with the error)
 """
+
 import re
 import sys
 from pathlib import Path
-from typing import Optional
 
 _ISSUE_RE = re.compile(r"#\d+")
-_CONVENTIONAL_RE = re.compile(
-    r"^(feat|fix|chore|docs|refactor|test|perf|build|ci|style|revert)(\(.+\))?!?: "
-)
+_CONVENTIONAL_RE = re.compile(r"^(feat|fix|chore|docs|refactor|test|perf|build|ci|style|revert)(\(.+\))?!?: ")
 _AUTO_PREFIXES = ("Merge ", "Revert ", "fixup! ", "squash! ", "amend! ")
 
 ERROR = (
@@ -19,7 +17,7 @@ ERROR = (
 )
 
 
-def check(message: str) -> Optional[str]:
+def check(message: str) -> str | None:
     """Return an error string, or None when the message is acceptable."""
     lines = message.strip().splitlines()
     subject = lines[0].strip() if lines else ""
@@ -30,7 +28,7 @@ def check(message: str) -> Optional[str]:
     return ERROR
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
     if len(args) != 1:
         print("usage: commit_msg.py <message-file>", file=sys.stderr)

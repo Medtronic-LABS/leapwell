@@ -5,10 +5,11 @@ issue/PR text, where source-style examples are not expected).
 
 CLI: python3 scripts/sdlc/guard_staged.py   (exits 1 listing `path: category`)
 """
+
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -48,7 +49,7 @@ def decode_blob(data: bytes) -> str:
     return data.decode("utf-8", errors="replace")
 
 
-def read_staged_blob(path: str, repo: Optional[str] = None) -> str:
+def read_staged_blob(path: str, repo: str | None = None) -> str:
     """Read the staged (index) version of a file, not the working tree."""
     command = ["git"] + (["-C", repo] if repo else []) + ["show", f":{path}"]
     try:
@@ -61,12 +62,14 @@ def read_staged_blob(path: str, repo: Optional[str] = None) -> str:
 def staged_paths() -> list[str]:
     done = subprocess.run(
         ["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     return [line for line in done.stdout.splitlines() if line]
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     problems = check(staged_paths(), read_staged_blob)
     for problem in problems:
         print(problem, file=sys.stderr)

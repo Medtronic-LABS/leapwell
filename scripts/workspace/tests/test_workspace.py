@@ -11,9 +11,12 @@ from scripts.workspace import doctor
 ROOT = Path(__file__).resolve().parents[3]
 HOOKS = ROOT / ".githooks"
 GIT_ENV = {
-    "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
-    "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com",
-    "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull,
+    "GIT_AUTHOR_NAME": "t",
+    "GIT_AUTHOR_EMAIL": "t@example.com",
+    "GIT_COMMITTER_NAME": "t",
+    "GIT_COMMITTER_EMAIL": "t@example.com",
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_SYSTEM": os.devnull,
 }
 
 
@@ -23,8 +26,15 @@ def git(cwd, *args, check=True):
 
 
 def entry(key, name, area="Mobile app", branch="develop"):
-    return {"key": key, "name": name, "area": area, "stack": "x", "integration_branch": branch,
-            "protected_branches": [branch], "verify": {"test": "t", "lint": "l", "build": "b"}}
+    return {
+        "key": key,
+        "name": name,
+        "area": area,
+        "stack": "x",
+        "integration_branch": branch,
+        "protected_branches": [branch],
+        "verify": {"test": "t", "lint": "l", "build": "b"},
+    }
 
 
 class DoctorTests(unittest.TestCase):
@@ -35,8 +45,12 @@ class DoctorTests(unittest.TestCase):
         self.assertEqual(doctor.required_tools(["Frappe apps"]).get("flutter"), None)
 
     def test_missing_and_ok(self):
-        rows = doctor.check(["Frappe apps"], which=lambda t: None if t == "docker" else "/bin/" + t,
-                            run=lambda c: 0, python_version=(3, 12))
+        rows = doctor.check(
+            ["Frappe apps"],
+            which=lambda t: None if t == "docker" else "/bin/" + t,
+            run=lambda c: 0,
+            python_version=(3, 12),
+        )
         status = {tool: st for tool, st, _ in rows}
         self.assertEqual(status["docker"], "MISSING")
         self.assertEqual(status["git"], "ok")
@@ -78,8 +92,7 @@ class SetupTests(WorkspaceCase):
     def setUp(self):
         super().setUp()
         self.lw = self.tmp / "lw"
-        shutil.copytree(ROOT / "scripts", self.lw / "scripts",
-                        ignore=shutil.ignore_patterns("__pycache__", "tests"))
+        shutil.copytree(ROOT / "scripts", self.lw / "scripts", ignore=shutil.ignore_patterns("__pycache__", "tests"))
         shutil.copytree(HOOKS, self.lw / ".githooks")
         shutil.copy(ROOT / "repos.json", self.lw / "repos.json")
 
@@ -88,8 +101,13 @@ class SetupTests(WorkspaceCase):
 
     def run_setup(self, manifest, *args):
         env = {**os.environ, "LW_REPOS_JSON": str(manifest), "LW_CLONE_BASE": f"file://{self.remotes}/"}
-        return subprocess.run(["bash", str(self.lw / "scripts/workspace/setup.sh"), *args],
-                              cwd=self.lw, env=env, capture_output=True, text=True)
+        return subprocess.run(
+            ["bash", str(self.lw / "scripts/workspace/setup.sh"), *args],
+            cwd=self.lw,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
 
     def test_help_and_no_clone_touch_nothing(self):
         manifest = self.manifest(entry("a", "alpha"))

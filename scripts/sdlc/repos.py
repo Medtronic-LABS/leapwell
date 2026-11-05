@@ -3,13 +3,14 @@
 `load()` honours the `LW_REPOS_JSON` environment variable (a path) so tests and
 tooling can point at another manifest.
 """
+
 import argparse
 import json
 import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 DEFAULT_PATH = Path(__file__).resolve().parents[2] / "repos.json"
 ENV_OVERRIDE = "LW_REPOS_JSON"
@@ -78,7 +79,10 @@ def _parse_repo(entry: Any, index: int) -> Repo:
         raise ValueError(f"{label}: 'notes' must be a string")
     return Repo(
         notes=notes,
-        key=entry["key"], name=entry["name"], area=entry["area"], stack=entry["stack"],
+        key=entry["key"],
+        name=entry["name"],
+        area=entry["area"],
+        stack=entry["stack"],
         integration_branch=entry["integration_branch"],
         protected_branches=tuple(protected),
         verify={k: verify[k] for k in _VERIFY_KEYS},
@@ -97,7 +101,7 @@ def parse(data: Any) -> Manifest:
     return Manifest(org=data["org"], tracker=data["tracker"], project=data["project"], repos=repos)
 
 
-def load(path: Optional[os.PathLike] = None) -> Manifest:
+def load(path: os.PathLike | None = None) -> Manifest:
     """Load and validate the manifest; raises ValueError naming the bad entry."""
     source = Path(path) if path else Path(os.environ.get(ENV_OVERRIDE) or DEFAULT_PATH)
     try:
@@ -107,7 +111,7 @@ def load(path: Optional[os.PathLike] = None) -> Manifest:
     return parse(data)
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """CLI for shell scripts: `--list` prints `key name integration_branch` per repo;
     `--get org|tracker|project` prints one top-level fact."""
     parser = argparse.ArgumentParser(description="Read facts from repos.json")

@@ -1,4 +1,5 @@
 """Tests for scripts.sdlc.close_parents."""
+
 import contextlib
 import io
 import json

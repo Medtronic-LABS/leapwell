@@ -1,4 +1,5 @@
 """Tests for scripts.sdlc.patterns (sensitive-data scan, protected paths, issue refs)."""
+
 import unittest
 
 from scripts.sdlc.patterns import (
@@ -26,8 +27,12 @@ class TestFindSensitive(unittest.TestCase):
 
     def test_national_id_flagged_with_keyword_or_17_digits(self):
         for text in (
-            "NID: 1234567890", "national id 2234567890123", "NID No 1234567890123",
-            "জাতীয় পরিচয় 1234567890", "12345678901234567", "id 19900101123456789",
+            "NID: 1234567890",
+            "national id 2234567890123",
+            "NID No 1234567890123",
+            "জাতীয় পরিচয় 1234567890",
+            "12345678901234567",
+            "id 19900101123456789",
         ):
             self.assertEqual(find_sensitive(text), ["national_id"], text)
 
@@ -83,9 +88,7 @@ class TestFindSensitive(unittest.TestCase):
         self.assertEqual(find_sensitive("aws_secret_access_key = <your-secret>"), [])
 
     def test_private_key(self):
-        self.assertEqual(
-            find_sensitive("-----BEGIN " + "RSA PRIVATE KEY-----"), ["private_key"]
-        )
+        self.assertEqual(find_sensitive("-----BEGIN " + "RSA PRIVATE KEY-----"), ["private_key"])
 
     def test_jwt(self):
         jwt = "eyJ" + "a" * 10 + ".eyJ" + "b" * 10 + "." + "c" * 10
@@ -125,28 +128,51 @@ class TestFindSensitive(unittest.TestCase):
     def test_credential_categories_exclude_phi(self):
         self.assertEqual(
             CREDENTIAL_CATEGORIES,
-            {"bearer_token", "hf_token", "github_token", "google_api_key", "aws_key",
-             "private_key", "jwt", "password_assignment"},
+            {
+                "bearer_token",
+                "hf_token",
+                "github_token",
+                "google_api_key",
+                "aws_key",
+                "private_key",
+                "jwt",
+                "password_assignment",
+            },
         )
 
 
 class TestProtectedPath(unittest.TestCase):
     def test_protected(self):
         for path in (
-            "env.production.json", "env.development.json", "env.json",
+            "env.production.json",
+            "env.development.json",
+            "env.json",
             "cfg/env.local.json",
-            "android/key.properties", "release.jks", "a/b/upload.keystore",
-            "android/app/google-services.json", "ios/Runner/GoogleService-Info.plist",
-            ".env", ".env.local", "sub/.env.production",
+            "android/key.properties",
+            "release.jks",
+            "a/b/upload.keystore",
+            "android/app/google-services.json",
+            "ios/Runner/GoogleService-Info.plist",
+            ".env",
+            ".env.local",
+            "sub/.env.production",
         ):
             self.assertTrue(is_protected_path(path), path)
 
     def test_not_protected(self):
         for path in (
-            "env.example.json", "pubspec.yaml", "lib/environment.dart",
-            "lib/env_config.dart", "docs/env.md", "key_properties.md",
-            "environment_config.json", "env_response.json", "assets/env_response.json",
-            ".env.example", "sub/.env.example", "env-dev.json",
+            "env.example.json",
+            "pubspec.yaml",
+            "lib/environment.dart",
+            "lib/env_config.dart",
+            "docs/env.md",
+            "key_properties.md",
+            "environment_config.json",
+            "env_response.json",
+            "assets/env_response.json",
+            ".env.example",
+            "sub/.env.example",
+            "env-dev.json",
         ):
             self.assertFalse(is_protected_path(path), path)
 
@@ -163,7 +189,11 @@ class TestIssueRef(unittest.TestCase):
 
 class TestTrackerRef(unittest.TestCase):
     def test_cross_repo_forms_match_both_regexes(self):
-        for text in ("Closes Medtronic-LABS/leapwell#12", "Refs Medtronic-LABS/leapwell#7", "fixes medtronic-labs/leapwell#3"):
+        for text in (
+            "Closes Medtronic-LABS/leapwell#12",
+            "Refs Medtronic-LABS/leapwell#7",
+            "fixes medtronic-labs/leapwell#3",
+        ):
             self.assertIsNotNone(ISSUE_REF_RE.search(text), text)
             self.assertIsNotNone(TRACKER_REF_RE.search(text), text)
 

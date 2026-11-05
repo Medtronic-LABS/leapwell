@@ -1,4 +1,5 @@
 """Static checks of the leapwell GitHub layer: forms, labels, workflows, ownership."""
+
 import re
 import unittest
 from pathlib import Path
@@ -102,14 +103,36 @@ class LabelsTest(unittest.TestCase):
     def test_labels_unique_and_complete(self):
         names = label_names()
         self.assertEqual(len(names), len(set(names)))
-        required = {"documentation", "duplicate", "good first issue",
-                    "help wanted", "invalid", "question", "wontfix", "refactor", "tech-debt",
-                    "prio:P0", "prio:P1", "prio:P2", "prio:P3",
-                    "env:prod", "env:training", "env:dev", "status:blocked", "status:needs-design",
-                    "type:bug", "type:feature", "type:task", "type:release",
-                    "status:needs-info", "status:routed", "status:triage"}
-        required |= {f"area:{a}" for a in (
-            "auth sync db visit cdss scribe teleconsult household push release ci i18n").split()}
+        required = {
+            "documentation",
+            "duplicate",
+            "good first issue",
+            "help wanted",
+            "invalid",
+            "question",
+            "wontfix",
+            "refactor",
+            "tech-debt",
+            "prio:P0",
+            "prio:P1",
+            "prio:P2",
+            "prio:P3",
+            "env:prod",
+            "env:training",
+            "env:dev",
+            "status:blocked",
+            "status:needs-design",
+            "type:bug",
+            "type:feature",
+            "type:task",
+            "type:release",
+            "status:needs-info",
+            "status:routed",
+            "status:triage",
+        }
+        required |= {
+            f"area:{a}" for a in ("auth sync db visit cdss scribe teleconsult household push release ci i18n").split()
+        }
         self.assertLessEqual(required, set(names))
         for legacy in ("bug", "enhancement", "chore", "release"):
             self.assertNotIn(legacy, names, "type:* is the only type-label contract")

@@ -1,4 +1,5 @@
 """Tests for scripts.sdlc.guard_staged."""
+
 import contextlib
 import io
 import subprocess
@@ -18,6 +19,7 @@ def reader(files):
         if isinstance(value, Exception):
             raise value
         return value
+
     return read
 
 
@@ -28,10 +30,9 @@ class TestCheck(unittest.TestCase):
     def test_protected_path_reported_without_reading(self):
         def explode(path):
             raise AssertionError("must not read protected files")
+
         problems = guard_staged.check(["env.production.json", "android/key.properties"], explode)
-        self.assertEqual(
-            problems, ["env.production.json: protected_path", "android/key.properties: protected_path"]
-        )
+        self.assertEqual(problems, ["env.production.json: protected_path", "android/key.properties: protected_path"])
 
     def test_credential_categories_reported_no_values(self):
         problems = guard_staged.check(["notes.md"], reader({"notes.md": f"key {TOKEN}"}))
@@ -87,8 +88,9 @@ class TestReadStagedBlob(unittest.TestCase):
             target.write_text("clean working tree")
             staged = guard_staged.read_staged_blob("a.txt", repo)
             self.assertIn(TOKEN, staged)
-            self.assertEqual(guard_staged.check(["a.txt"], lambda p: guard_staged.read_staged_blob(p, repo)),
-                             ["a.txt: hf_token"])
+            self.assertEqual(
+                guard_staged.check(["a.txt"], lambda p: guard_staged.read_staged_blob(p, repo)), ["a.txt: hf_token"]
+            )
 
     def test_unstaged_path_raises_oserror(self):
         with tempfile.TemporaryDirectory() as repo:

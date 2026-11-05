@@ -1,4 +1,5 @@
 """Tests for scripts.sdlc.scan_text."""
+
 import contextlib
 import io
 import tempfile

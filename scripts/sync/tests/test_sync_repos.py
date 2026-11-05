@@ -1,4 +1,5 @@
 """Tests for scripts.sync.sync_repos (temp git repos, no network)."""
+
 import contextlib
 import io
 import json
@@ -62,9 +63,15 @@ class TestApply(SyncCase):
         self.assertEqual(git(clone, "rev-parse", "--abbrev-ref", "HEAD").strip(), "chore/leapwell-sync")
         self.assertEqual(git(clone, "status", "--porcelain"), "")
         self.assertIn("chore(sync)", git(clone, "log", "-1", "--format=%s"))
-        for rel in (".github/workflows/lw-pr-check.yml", ".github/workflows/lw-secret-scan.yml",
-                    ".github/workflows/lw-close-on-merge.yml", ".github/pull_request_template.md",
-                    ".github/CODEOWNERS", "CLAUDE.md", ".github/ISSUE_TEMPLATE/config.yml"):
+        for rel in (
+            ".github/workflows/lw-pr-check.yml",
+            ".github/workflows/lw-secret-scan.yml",
+            ".github/workflows/lw-close-on-merge.yml",
+            ".github/pull_request_template.md",
+            ".github/CODEOWNERS",
+            "CLAUDE.md",
+            ".github/ISSUE_TEMPLATE/config.yml",
+        ):
             self.assertTrue((clone / rel).is_file(), rel)
         before = self.head(clone)
         self.assertFalse(self.sync(clone).changed)
@@ -94,8 +101,9 @@ class TestApply(SyncCase):
     def test_gh_expressions_survive_rendering(self):
         clone = make_clone(self.root)
         self.sync(clone)
-        self.assertIn("${{ github.event.pull_request.number }}",
-                      (clone / ".github/workflows/lw-pr-check.yml").read_text())
+        self.assertIn(
+            "${{ github.event.pull_request.number }}", (clone / ".github/workflows/lw-pr-check.yml").read_text()
+        )
 
 
 class TestMarkedSections(SyncCase):
@@ -135,8 +143,10 @@ class TestMarkedSections(SyncCase):
         self.assertTrue(plan.changed)
 
     def test_issue_config_with_markers_replaces_only_between(self):
-        existing = ("blank_issues_enabled: false\ncontact_links:\n  - name: keep\n    url: https://e.com\n    about: k\n"
-                    "  # leapwell:begin\n  - name: stale\n  # leapwell:end\n")
+        existing = (
+            "blank_issues_enabled: false\ncontact_links:\n  - name: keep\n    url: https://e.com\n    about: k\n"
+            "  # leapwell:begin\n  - name: stale\n  # leapwell:end\n"
+        )
         clone = make_clone(self.root, {".github/ISSUE_TEMPLATE/config.yml": existing})
         self.sync(clone)
         new = (clone / ".github/ISSUE_TEMPLATE/config.yml").read_text()
@@ -159,8 +169,9 @@ class TestSafety(SyncCase):
         self.assertIn(".github/PULL_REQUEST_TEMPLATE.md", plan.writes)
         self.assertNotIn(".github/pull_request_template.md", plan.writes)
         tracked = git(clone, "ls-files", ".github").split()
-        self.assertEqual([p for p in tracked if p.lower().endswith("pull_request_template.md")],
-                         [".github/PULL_REQUEST_TEMPLATE.md"])
+        self.assertEqual(
+            [p for p in tracked if p.lower().endswith("pull_request_template.md")], [".github/PULL_REQUEST_TEMPLATE.md"]
+        )
         self.assertEqual(git(clone, "status", "--porcelain"), "")
 
     def test_pr_template_at_root_or_docs_is_updated_there(self):
@@ -169,8 +180,10 @@ class TestSafety(SyncCase):
                 clone = make_clone(self.root / rel.replace("/", "_"), {rel: "old\n"})
                 plan = self.sync(clone)
                 self.assertIn(rel, plan.writes)
-                self.assertFalse((clone / ".github").exists() and any(
-                    p.name.lower() == "pull_request_template.md" for p in (clone / ".github").iterdir()))
+                self.assertFalse(
+                    (clone / ".github").exists()
+                    and any(p.name.lower() == "pull_request_template.md" for p in (clone / ".github").iterdir())
+                )
 
     def test_codeowners_at_root_or_docs_is_left_untouched(self):
         for rel in ("CODEOWNERS", "docs/CODEOWNERS"):
@@ -233,10 +246,19 @@ class TestMain(SyncCase):
 
     def manifest_env(self):
         data = {
-            "org": "Medtronic-LABS", "tracker": "leapwell", "project": 4,
+            "org": "Medtronic-LABS",
+            "tracker": "leapwell",
+            "project": 4,
             "repos": [
-                {"key": k, "name": n, "area": "a", "stack": "s", "integration_branch": "develop",
-                 "protected_branches": ["develop"], "verify": {"test": "", "lint": "", "build": ""}}
+                {
+                    "key": k,
+                    "name": n,
+                    "area": "a",
+                    "stack": "s",
+                    "integration_branch": "develop",
+                    "protected_branches": ["develop"],
+                    "verify": {"test": "", "lint": "", "build": ""},
+                }
                 for k, n in (("a", "alpha"), ("b", "beta"), ("c", "gamma"))
             ],
         }

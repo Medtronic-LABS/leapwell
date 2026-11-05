@@ -4,8 +4,9 @@ Single home for: the sensitive-data scan, protected file paths, the issue
 reference rule and the required issue sections. Only category names are ever
 returned for sensitive matches, never the matched text.
 """
+
 import re
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 _PLACEHOLDER_EMAIL_DOMAINS = re.compile(r"^example\.(com|org|net)$", re.IGNORECASE)
 _PLACEHOLDER_EMAIL_LOCALS = re.compile(r"^(no-?reply)$", re.IGNORECASE)
@@ -45,10 +46,18 @@ _PATTERNS: dict[str, re.Pattern[str]] = {
 _EMAIL_CATEGORY = "email"
 _NATIONAL_ID_CATEGORY = "national_id"
 
-CREDENTIAL_CATEGORIES = frozenset({
-    "bearer_token", "hf_token", "github_token", "google_api_key", "aws_key",
-    "private_key", "jwt", "password_assignment",
-})
+CREDENTIAL_CATEGORIES = frozenset(
+    {
+        "bearer_token",
+        "hf_token",
+        "github_token",
+        "google_api_key",
+        "aws_key",
+        "private_key",
+        "jwt",
+        "password_assignment",
+    }
+)
 
 # Digit runs of 10 / 13 / 17 that stand alone (not inside hashes, UUIDs, paths or decimals).
 _ID_CANDIDATE_RE = re.compile(r"(?<![\w./-])(\d{17}|\d{13}|\d{10})(?![\w.])")
@@ -67,13 +76,13 @@ def _national_id_present(text: str) -> bool:
         epoch = _EPOCH_SECONDS_RE if len(digits) == 10 else _EPOCH_MILLIS_RE
         if epoch.fullmatch(digits):
             continue
-        window = text[max(0, match.start() - _ID_KEYWORD_WINDOW):match.start()]
+        window = text[max(0, match.start() - _ID_KEYWORD_WINDOW) : match.start()]
         if _ID_KEYWORD_RE.search(window):
             return True
     return False
 
 
-def find_sensitive(text: str, categories: Optional[Iterable[str]] = None) -> list[str]:
+def find_sensitive(text: str, categories: Iterable[str] | None = None) -> list[str]:
     """Return sorted unique category names of sensitive data found in text.
 
     `categories` restricts the result to those categories (default: all).
@@ -106,13 +115,13 @@ def is_protected_path(path: str) -> bool:
     return PROTECTED_PATH_RE.search(path) is not None
 
 
-TRACKER_SLUG = "Medtronic-LABS/leapwell"  # kept in sync with repos.json by test_repos.test_tracker_slug_matches_patterns_constant
+TRACKER_SLUG = (
+    "Medtronic-LABS/leapwell"  # kept in sync with repos.json by test_repos.test_tracker_slug_matches_patterns_constant
+)
 _REF_KEYWORDS = r"(close[sd]?|fix(e[sd])?|resolve[sd]?|refs?)"
 
 # `<kw> #N` (same repo) or `<kw> Medtronic-LABS/leapwell#N` (cross-repo, from a code repo).
-ISSUE_REF_RE = re.compile(
-    rf"\b{_REF_KEYWORDS}\s+(?:{re.escape(TRACKER_SLUG)})?#\d+\b", re.IGNORECASE
-)
+ISSUE_REF_RE = re.compile(rf"\b{_REF_KEYWORDS}\s+(?:{re.escape(TRACKER_SLUG)})?#\d+\b", re.IGNORECASE)
 # The cross-repo form only.
 TRACKER_REF_RE = re.compile(rf"\b{_REF_KEYWORDS}\s+{re.escape(TRACKER_SLUG)}#\d+\b", re.IGNORECASE)
 
@@ -121,12 +130,22 @@ PRIVACY_HEADING = "Privacy check"
 REQUIRED_SECTIONS: dict[str, list[str]] = {
     # App version, Build flavor and Device are optional: backend and dashboard bugs have none.
     "bug": [
-        "Screen or feature", "Steps to reproduce", "Expected behaviour", "Actual behaviour", "Frequency",
-        "Impact", PRIVACY_HEADING,
+        "Screen or feature",
+        "Steps to reproduce",
+        "Expected behaviour",
+        "Actual behaviour",
+        "Frequency",
+        "Impact",
+        PRIVACY_HEADING,
     ],
     "feature": [
-        "User", "Problem", "Proposed solution", "Acceptance criteria", "Programme",
-        "Offline behaviour", PRIVACY_HEADING,
+        "User",
+        "Problem",
+        "Proposed solution",
+        "Acceptance criteria",
+        "Programme",
+        "Offline behaviour",
+        PRIVACY_HEADING,
     ],
     "task": ["What", "Why now", "Risk if not done", PRIVACY_HEADING],
     "release": ["Version", "Release checklist"],

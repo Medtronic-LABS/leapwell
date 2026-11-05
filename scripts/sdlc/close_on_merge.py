@@ -6,12 +6,12 @@ Dry-run unless --apply. Needs `gh` authenticated (GH_TOKEN). GitHub only auto-cl
 for merges into the default branch, so this covers non-default integration branches.
 `refs #N` never closes; cross-repo references (`Closes owner/repo#N`) are ignored.
 """
+
 import argparse
 import json
 import re
 import sys
 from pathlib import Path
-from typing import Optional
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -51,7 +51,7 @@ def close_issues(repo: str, pr_number: int, numbers: list[int], apply: bool, gh:
     return failures
 
 
-def main(argv: Optional[list[str]] = None, gh: GhRunner = run_gh) -> int:
+def main(argv: list[str] | None = None, gh: GhRunner = run_gh) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--event", required=True, help="path to the GitHub event JSON")
     parser.add_argument("--repo", required=True, help="owner/name of the repo the PR belongs to")

@@ -5,6 +5,7 @@ CLI: python3 scripts/sync/sync_repos.py (--repo KEY | --all) [--ref REF] [--appl
 Dry-run prints unified diffs and writes nothing. `--apply` commits the change on the local
 branch `chore/leapwell-sync` of each clone. Never pushes. A dirty clone is refused.
 """
+
 import argparse
 import difflib
 import re
@@ -12,7 +13,6 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -49,6 +49,7 @@ ALT_LOCATION_FILES = frozenset({".github/pull_request_template.md", ".github/COD
 @dataclass
 class Plan:
     """Outcome of rendering one repo: files to write plus human-readable notes."""
+
     writes: dict[str, str]
     diffs: list[str]
     notes: list[str]
@@ -64,8 +65,11 @@ class SyncError(RuntimeError):
 
 def render(template: str, repo: repos.Repo, manifest: repos.Manifest, ref: str) -> str:
     values = {
-        "org": manifest.org, "tracker": manifest.tracker, "repo": repo.name,
-        "integration_branch": repo.integration_branch, "leapwell_ref": ref,
+        "org": manifest.org,
+        "tracker": manifest.tracker,
+        "repo": repo.name,
+        "integration_branch": repo.integration_branch,
+        "leapwell_ref": ref,
     }
     for name, value in values.items():
         template = template.replace("{{" + name + "}}", value)
@@ -77,7 +81,7 @@ def _marker_re(markers: tuple[str, str]) -> re.Pattern[str]:
     return re.compile(rf"^[ \t]*{begin}[ \t]*\n.*?^[ \t]*{end}[ \t]*$", re.DOTALL | re.MULTILINE)
 
 
-def replace_marked(existing: str, block: str, markers: tuple[str, str]) -> Optional[str]:
+def replace_marked(existing: str, block: str, markers: tuple[str, str]) -> str | None:
     """Swap the marked section for `block`; None when the markers are absent. Other bytes are untouched."""
     pattern = _marker_re(markers)
     if not pattern.search(existing):
@@ -85,14 +89,18 @@ def replace_marked(existing: str, block: str, markers: tuple[str, str]) -> Optio
     return pattern.sub(lambda _: block.rstrip("\n"), existing, count=1)
 
 
-def _diff(path: str, old: Optional[str], new: str) -> str:
-    return "".join(difflib.unified_diff(
-        (old or "").splitlines(keepends=True), new.splitlines(keepends=True),
-        fromfile="/dev/null" if old is None else f"a/{path}", tofile=f"b/{path}",
-    ))
+def _diff(path: str, old: str | None, new: str) -> str:
+    return "".join(
+        difflib.unified_diff(
+            (old or "").splitlines(keepends=True),
+            new.splitlines(keepends=True),
+            fromfile="/dev/null" if old is None else f"a/{path}",
+            tofile=f"b/{path}",
+        )
+    )
 
 
-def _read(clone: Path, rel: str) -> Optional[str]:
+def _read(clone: Path, rel: str) -> str | None:
     path = clone / rel
     if not path.is_file():
         return None
@@ -100,7 +108,7 @@ def _read(clone: Path, rel: str) -> Optional[str]:
         return handle.read()
 
 
-def _existing_spelling(clone: Path, rel: str) -> Optional[str]:
+def _existing_spelling(clone: Path, rel: str) -> str | None:
     """`rel` as the clone spells it (letter case can differ), or None when no such file exists."""
     target = Path(rel)
     parent = clone / target.parent
@@ -144,7 +152,7 @@ def _template(name: str) -> str:
 def plan_repo(clone: Path, repo: repos.Repo, manifest: repos.Manifest, ref: str) -> Plan:
     plan = Plan(writes={}, diffs=[], notes=[])
 
-    def propose(rel: str, old: Optional[str], new: str) -> None:
+    def propose(rel: str, old: str | None, new: str) -> None:
         if old != new:
             plan.writes[rel] = new
             plan.diffs.append(_diff(rel, old, new))
@@ -176,7 +184,9 @@ def plan_repo(clone: Path, repo: repos.Repo, manifest: repos.Manifest, ref: str)
             separator = "" if existing.endswith("\n\n") else ("\n" if existing.endswith("\n") else "\n\n")
             propose(rel, existing, existing + separator + block)
         else:
-            plan.notes.append(f"{rel} needs manual merge: it exists without leapwell markers ({markers[0]} ... {markers[1]})")
+            plan.notes.append(
+                f"{rel} needs manual merge: it exists without leapwell markers ({markers[0]} ... {markers[1]})"
+            )
     return plan
 
 
@@ -224,12 +234,14 @@ def sync_repo(clone: Path, repo: repos.Repo, manifest: repos.Manifest, ref: str,
     return plan
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     target = parser.add_mutually_exclusive_group(required=True)
     target.add_argument("--repo", help="repo key from repos.json")
     target.add_argument("--all", action="store_true", help="every repo in repos.json")
-    parser.add_argument("--ref", default=DEFAULT_REF, help="leapwell sha or tag the workflows check out (default: main)")
+    parser.add_argument(
+        "--ref", default=DEFAULT_REF, help="leapwell sha or tag the workflows check out (default: main)"
+    )
     parser.add_argument("--apply", action="store_true", help=f"commit on local branch {SYNC_BRANCH} (default: dry-run)")
     parser.add_argument("--workspace", default=str(DEFAULT_WORKSPACE), help="directory holding the clones")
     args = parser.parse_args(argv)

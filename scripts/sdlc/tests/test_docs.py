@@ -1,4 +1,5 @@
 """Checks for the process docs, wiki seed, mockups folder, CLAUDE.md and README."""
+
 import json
 import re
 import unittest
@@ -12,8 +13,13 @@ WIKI = ROOT / "wiki"
 MOCKUPS = ROOT / "mockups"
 DOCS = ("SDLC.md", "TICKETS.md", "REQUIREMENTS.md", "ADMIN_SETUP.md", "REPOS.md")
 FEATURE_PAGES = (
-    "Feature-AI-Scribe", "Feature-Visit-Briefing", "Feature-Micro-Coaching", "Feature-Visit-Flow-and-CDSS",
-    "Feature-Teleconsult-Shukhee", "Feature-Household-and-Enrolment", "Feature-Sync-and-Offline",
+    "Feature-AI-Scribe",
+    "Feature-Visit-Briefing",
+    "Feature-Micro-Coaching",
+    "Feature-Visit-Flow-and-CDSS",
+    "Feature-Teleconsult-Shukhee",
+    "Feature-Household-and-Enrolment",
+    "Feature-Sync-and-Offline",
 )
 WIKI_PAGES = ("Home", "Project-Overview", "Repos-and-Areas", "Glossary") + FEATURE_PAGES
 STATUS_FLOW = ("Triage", "Backlog", "Ready", "In progress", "In review", "QA", "Done")
@@ -22,8 +28,15 @@ URL_RE = re.compile(r"https?://[^\s)>`\"']+")
 ALLOWED_URL_PREFIXES = ("https://github.com/Medtronic-LABS/", "http://localhost")
 LINK_RE = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)\)")
 STANDARDS_LABELS = (
-    "OOP & SOLID", "DRY / reuse", "Modularity & separation of concerns", "Abstraction",
-    "Configuration management", "Localization", "Error handling", "Maintainability", "Scalability",
+    "OOP & SOLID",
+    "DRY / reuse",
+    "Modularity & separation of concerns",
+    "Abstraction",
+    "Configuration management",
+    "Localization",
+    "Error handling",
+    "Maintainability",
+    "Scalability",
 )
 
 
@@ -72,10 +85,23 @@ class ProcessDocsTest(unittest.TestCase):
 
     def test_sdlc_sections(self):
         sdlc = read(PROCESS / "SDLC.md")
-        for phrase in ("Definition of Ready", "Definition of Done", "Branching", "CI gates", "Hotfix",
-                       "RELEASE_PLAN.md", "gh auth refresh -s project", ".superpowers/sdd/", "Closes #n",
-                       "Refs Medtronic-LABS/leapwell#N", "lw-close-on-merge", "close-parents", "status:routed",
-                       "judged by nature, not line count", "Jira"):
+        for phrase in (
+            "Definition of Ready",
+            "Definition of Done",
+            "Branching",
+            "CI gates",
+            "Hotfix",
+            "RELEASE_PLAN.md",
+            "gh auth refresh -s project",
+            ".superpowers/sdd/",
+            "Closes #n",
+            "Refs Medtronic-LABS/leapwell#N",
+            "lw-close-on-merge",
+            "close-parents",
+            "status:routed",
+            "judged by nature, not line count",
+            "Jira",
+        ):
             self.assertIn(phrase, sdlc)
         for size in ("| S |", "| M |", "| L |"):
             self.assertIn(size, sdlc)
@@ -94,32 +120,76 @@ class ProcessDocsTest(unittest.TestCase):
 
     def test_tickets_guide_covers_intake(self):
         tickets = read(PROCESS / "TICKETS.md")
-        for phrase in ("/lw-ticket", "file a bug", "public", "Discussion", "Triage", "screenshot",
-                       "issues/new/choose", "status:routed"):
+        for phrase in (
+            "/lw-ticket",
+            "file a bug",
+            "public",
+            "Discussion",
+            "Triage",
+            "screenshot",
+            "issues/new/choose",
+            "status:routed",
+        ):
             self.assertIn(phrase, tickets)
 
     def test_requirements_covers_flow(self):
         text = read(PROCESS / "REQUIREMENTS.md")
-        for phrase in ("/lw-promote", "/lw-route", "close-parents", "sub-issue", "/lw-wiki", "mockups/<feature-slug>/",
-                       "mockup-scan", "Fake data only", "Wiki rules", "Mockup rules"):
+        for phrase in (
+            "/lw-promote",
+            "/lw-route",
+            "close-parents",
+            "sub-issue",
+            "/lw-wiki",
+            "mockups/<feature-slug>/",
+            "mockup-scan",
+            "Fake data only",
+            "Wiki rules",
+            "Mockup rules",
+        ):
             self.assertIn(phrase, text)
 
     def test_admin_setup_covers_owner_steps(self):
         admin = read(PROCESS / "ADMIN_SETUP.md").lower()
-        for phrase in ("dist/skills/lw-ticket.zip", "package_skill.sh", "sync_labels.sh", "setup_discussions.sh",
-                       "setup_project.sh", "publish_wiki.sh", "protect_branches.sh", "sync_repos.py", "--apply",
-                       "leapwell_bot_token", "issues: read", "issues: write", "60 days", "workflow_dispatch",
-                       "private vulnerability reporting", "settings.local.json", "open decisions",
-                       "env.development.json", "frappe v16", "triage", "first page",
-                       "item added to project", "item closed", "pull request merged", "item reopened",
-                       "auto-add to project"):
+        for phrase in (
+            "dist/skills/lw-ticket.zip",
+            "package_skill.sh",
+            "sync_labels.sh",
+            "setup_discussions.sh",
+            "setup_project.sh",
+            "publish_wiki.sh",
+            "protect_branches.sh",
+            "sync_repos.py",
+            "--apply",
+            "leapwell_bot_token",
+            "issues: read",
+            "issues: write",
+            "60 days",
+            "workflow_dispatch",
+            "private vulnerability reporting",
+            "settings.local.json",
+            "open decisions",
+            "env.development.json",
+            "frappe v16",
+            "triage",
+            "first page",
+            "item added to project",
+            "item closed",
+            "pull request merged",
+            "item reopened",
+            "auto-add to project",
+        ):
             self.assertIn(phrase, admin)
 
     def test_project_workflows_match_script(self):
         script = read(ROOT / "scripts/github/setup_project.sh")
         admin = read(PROCESS / "ADMIN_SETUP.md")
-        for name in ("Item added to project", "Item closed", "Pull request merged", "Item reopened",
-                     "Auto-add to project"):
+        for name in (
+            "Item added to project",
+            "Item closed",
+            "Pull request merged",
+            "Item reopened",
+            "Auto-add to project",
+        ):
             self.assertIn(name, script)
             self.assertIn(name, admin)
 
@@ -169,14 +239,23 @@ class ClaudeMdTest(unittest.TestCase):
 
     def test_key_rules_present(self):
         claude = read(ROOT / "CLAUDE.md")
-        for phrase in ("Start Claude from the leapwell root", "/lw-setup", "docs/process/SDLC.md", "## Human-only gates",
-                       "## Privacy rules", "## Workspace map", "## Ticket model", "repos.json", "public"):
+        for phrase in (
+            "Start Claude from the leapwell root",
+            "/lw-setup",
+            "docs/process/SDLC.md",
+            "## Human-only gates",
+            "## Privacy rules",
+            "## Workspace map",
+            "## Ticket model",
+            "repos.json",
+            "public",
+        ):
             self.assertIn(phrase, claude)
 
     def test_engineering_standards_section(self):
         claude = read(ROOT / "CLAUDE.md")
         self.assertIn("## Engineering Design Standards", claude)
-        section = claude[claude.index("## Engineering Design Standards"):]
+        section = claude[claude.index("## Engineering Design Standards") :]
         for label in STANDARDS_LABELS:
             self.assertIn(f"**{label}.**", section)
         self.assertIn("repos/uhis_lf_mobile/lib/core/constants/app_strings.dart", section)
@@ -213,8 +292,15 @@ class WikiAndMockupsTest(unittest.TestCase):
 
     def test_mockups_docs(self):
         readme = read(MOCKUPS / "README.md")
-        for phrase in ("mockups/<feature-slug>/", "HTML, PNG, SVG, PDF", "Fake data only", "mockup-scan",
-                       "scan_text.py", "_template/README.md", "PR"):
+        for phrase in (
+            "mockups/<feature-slug>/",
+            "HTML, PNG, SVG, PDF",
+            "Fake data only",
+            "mockup-scan",
+            "scan_text.py",
+            "_template/README.md",
+            "PR",
+        ):
             self.assertIn(phrase, readme)
         template = read(MOCKUPS / "_template" / "README.md")
         for phrase in ("Medtronic-LABS/leapwell#", "Fake data only"):

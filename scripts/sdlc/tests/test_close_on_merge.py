@@ -1,4 +1,5 @@
 """Tests for scripts.sdlc.close_on_merge."""
+
 import contextlib
 import io
 import json
