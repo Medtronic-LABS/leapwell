@@ -1,0 +1,32 @@
+title: "[Feedback] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository is public. Do not paste patient or member data, names, phone numbers, IDs, credentials, tokens or unscrubbed logs.
+  - type: input
+    id: where_when
+    attributes:
+      label: Where and when
+      description: District or setting type and roughly when (no village, facility or person names).
+    validations:
+      required: true
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact on the work
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: This post contains no patient/member data, names, phone numbers, IDs, credentials, tokens or unscrubbed logs (this repo is public)
+          required: true

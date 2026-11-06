@@ -1,0 +1,96 @@
+{
+  "org": "Medtronic-LABS",
+  "tracker": "leapwell",
+  "project": 4,
+  "hub_lint_rules": [
+    {"files": ["*.py"], "run": "ruff check"},
+    {"files": ["*.py"], "run": "ruff format --check"},
+    {"files": ["*.sh", ".githooks/*"], "run": "shellcheck -S warning -x"},
+    {"files": [".github/workflows/*.yml"], "run": "actionlint"}
+  ],
+  "repos": [
+    {
+      "key": "mobile",
+      "name": "uhis_lf_mobile",
+      "area": "Mobile app",
+      "stack": "Flutter",
+      "lint_rules": [{"files": ["*.dart"], "run": "dart analyze"}],
+      "integration_branch": "develop",
+      "protected_branches": ["develop", "main"],
+      "verify": {"test": "flutter test", "lint": "flutter analyze", "build": "flutter build apk --debug"}
+    },
+    {
+      "key": "core",
+      "name": "frappe_spice_next_core",
+      "area": "Frappe apps",
+      "stack": "Frappe (Python)",
+      "lint_rules": [{"files": ["*.py"], "run": "ruff check"}],
+      "integration_branch": "main",
+      "protected_branches": ["main"],
+      "notes": "needs the frappe env (env/frappe); site from env/frappe/.env",
+      "verify": {
+        "test": "bench --site {site} run-tests --app spice_next_core",
+        "lint": "ruff check spice_next_core/",
+        "build": "bench build --app spice_next_core"
+      }
+    },
+    {
+      "key": "shukhee",
+      "name": "leapwell_shukhee_integration",
+      "area": "Frappe apps",
+      "stack": "Frappe (Python)",
+      "lint_rules": [{"files": ["*.py"], "run": "ruff check"}],
+      "integration_branch": "main",
+      "protected_branches": ["main"],
+      "notes": "needs the frappe env (env/frappe); site from env/frappe/.env",
+      "verify": {
+        "test": "bench --site {site} run-tests --app shukhee_integration",
+        "lint": "ruff check .",
+        "build": "bench build --app shukhee_integration"
+      }
+    },
+    {
+      "key": "ai",
+      "name": "leapfrog-ai-service",
+      "area": "AI Scribe",
+      "stack": "Python FastAPI",
+      "lint_rules": [{"files": ["*.py"], "run": "ruff check --isolated"}],
+      "integration_branch": "develop",
+      "protected_branches": ["develop", "main"],
+      "notes": "no build step",
+      "verify": {"test": "pytest -q", "lint": "ruff check .", "build": ""}
+    },
+    {
+      "key": "coaching",
+      "name": "spice-coaching",
+      "area": "Micro-coaching",
+      "stack": "Python",
+      "lint_rules": [{"files": ["*.py"], "run": "ruff check"}],
+      "integration_branch": "development",
+      "protected_branches": ["development", "leapwell-main", "main"],
+      "notes": "no build step",
+      "verify": {"test": "python -m pytest", "lint": "ruff check .", "build": ""}
+    },
+    {
+      "key": "coaching-android",
+      "name": "spice-coaching-android",
+      "area": "Micro-coaching",
+      "stack": "Kotlin",
+      "lint_rules": [],
+      "integration_branch": "development",
+      "protected_branches": ["development", "leapwell-main", "main"],
+      "notes": "lint not documented - check README",
+      "verify": {"test": "./gradlew :sdk-android:test", "lint": "", "build": "./gradlew :sdk-android:assembleDebug"}
+    },
+    {
+      "key": "coaching-dashboard",
+      "name": "spice-coaching-dashboard-ui",
+      "area": "Micro-coaching",
+      "stack": "TypeScript/Vite",
+      "lint_rules": [{"files": ["*.ts", "*.tsx"], "run": "npx --no eslint"}, {"files": ["*.ts", "*.tsx"], "run": "npx --no prettier --check"}],
+      "integration_branch": "develop",
+      "protected_branches": ["develop", "leapwell-main", "main"],
+      "verify": {"test": "npm run test -- --run", "lint": "npm run lint", "build": "npm run build"}
+    }
+  ]
+}

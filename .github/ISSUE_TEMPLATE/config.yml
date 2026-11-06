@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/Medtronic-LABS/leapwell/security/advisories/new
+    about: Do not open a public issue for security problems or exposed patient data.
+  - name: Ideas and questions -> Discussions
+    url: https://github.com/Medtronic-LABS/leapwell/discussions
+    about: Early ideas, field feedback and partner requests go to Discussions; a PM promotes agreed ideas to issues.

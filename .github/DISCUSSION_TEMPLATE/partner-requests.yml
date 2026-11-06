@@ -1,0 +1,40 @@
+title: "[Partner] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository is public. Do not paste patient or member data, names, phone numbers, IDs, credentials, tokens or unscrubbed logs.
+  - type: dropdown
+    id: partner_type
+    attributes:
+      label: Partner type
+      description: The kind of partner, not their name.
+      options:
+        - Ministry or government
+        - NGO or implementing partner
+        - Funder
+        - Research or academic
+        - Technology partner
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: request
+    attributes:
+      label: Request
+    validations:
+      required: true
+  - type: input
+    id: deadline
+    attributes:
+      label: Deadline
+      description: A date or "none".
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: This post contains no patient/member data, names, phone numbers, IDs, credentials, tokens or unscrubbed logs (this repo is public)
+          required: true
