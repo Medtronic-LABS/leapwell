@@ -16,9 +16,9 @@ INTEGRATION = {
     "core": "main",
     "shukhee": "main",
     "ai": "develop",
-    "coaching": "leapwell-main",
-    "coaching-android": "leapwell-main",
-    "coaching-dashboard": "leapwell-main",
+    "coaching": "development",
+    "coaching-android": "development",
+    "coaching-dashboard": "develop",
 }
 
 
@@ -63,7 +63,7 @@ class TestRealManifest(unittest.TestCase):
             self.assertEqual(len(repo.protected_branches), len(set(repo.protected_branches)), repo.key)
 
     def test_protected_union(self):
-        self.assertEqual(self.manifest.protected_branches(), {"main", "develop", "leapwell-main"})
+        self.assertEqual(self.manifest.protected_branches(), {"main", "develop", "development", "leapwell-main"})
 
     def test_tracker_slug_matches_patterns_constant(self):
         self.assertEqual(self.manifest.tracker_slug, "Medtronic-LABS/leapwell")

@@ -27,7 +27,7 @@
 | Shukhee | External calling/telephony system used for teleconsult |
 | Micro-coaching | AI-assisted short coaching modules and chat for health workers |
 | Sub-issue | A code-repo issue linked to a leapwell item; the "how" of a ticket |
-| Integration branch | The branch PRs target in a repo (`develop`, `main` or `leapwell-main`) |
+| Integration branch | The branch PRs target in a repo (`develop`, `development` or `main`) |
 | FHIR R4 | The healthcare data standard used at API boundaries |
 | Frappe | The Python web framework the server of record is built on |
 

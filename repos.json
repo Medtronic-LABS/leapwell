@@ -66,8 +66,8 @@
       "area": "Micro-coaching",
       "stack": "Python",
       "lint_rules": [{"files": ["*.py"], "run": "ruff check"}],
-      "integration_branch": "leapwell-main",
-      "protected_branches": ["leapwell-main", "main"],
+      "integration_branch": "development",
+      "protected_branches": ["development", "leapwell-main", "main"],
       "notes": "no build step",
       "verify": {"test": "python -m pytest", "lint": "ruff check .", "build": ""}
     },
@@ -77,8 +77,8 @@
       "area": "Micro-coaching",
       "stack": "Kotlin",
       "lint_rules": [],
-      "integration_branch": "leapwell-main",
-      "protected_branches": ["leapwell-main", "main"],
+      "integration_branch": "development",
+      "protected_branches": ["development", "leapwell-main", "main"],
       "notes": "lint not documented - check README",
       "verify": {"test": "./gradlew :sdk-android:test", "lint": "", "build": "./gradlew :sdk-android:assembleDebug"}
     },
@@ -88,8 +88,8 @@
       "area": "Micro-coaching",
       "stack": "TypeScript/Vite",
       "lint_rules": [{"files": ["*.ts", "*.tsx"], "run": "npx --no eslint"}, {"files": ["*.ts", "*.tsx"], "run": "npx --no prettier --check"}],
-      "integration_branch": "leapwell-main",
-      "protected_branches": ["leapwell-main", "main"],
+      "integration_branch": "develop",
+      "protected_branches": ["develop", "leapwell-main", "main"],
       "verify": {"test": "npm run test -- --run", "lint": "npm run lint", "build": "npm run build"}
     }
   ]

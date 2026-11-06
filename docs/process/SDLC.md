@@ -115,7 +115,7 @@ data add `status:needs-info` and one bot comment; fixing the issue removes the l
 
 ## 5. Branching
 
-- Each repo's integration branch is in [REPOS.md](REPOS.md) (`develop`, `main` or `leapwell-main`). Nobody pushes
+- Each repo's integration branch is in [REPOS.md](REPOS.md) (`develop`, `development` or `main`). Nobody pushes
   to it or to `main` directly; the guard hook blocks it in Claude Code and branch protection on GitHub.
 - Work branches from the integration branch: `<type>/<issue#>-<slug>`, `<issue#>` the repo-local sub-issue
   number, type one of `feat | fix | chore | docs | refactor | test | hotfix`. Example: `fix/123-sync-stuck-90`.

@@ -28,7 +28,7 @@ clinical app with offline-first storage; an admin dashboard manages modules and 
 - [spice-coaching-android](https://github.com/Medtronic-LABS/spice-coaching-android)
 - [spice-coaching-dashboard-ui](https://github.com/Medtronic-LABS/spice-coaching-dashboard-ui)
 
-Integration branch for all three is `leapwell-main`.
+Integration branch: `development` for spice-coaching and spice-coaching-android, `develop` for the dashboard. The older `leapwell-main` branches are no longer used.
 
 ## Mockups
 

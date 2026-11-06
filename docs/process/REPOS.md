@@ -10,9 +10,9 @@ each into `repos/<name>` in the workspace. `leapfrog-ai-service` is private; the
 | `core` | [frappe_spice_next_core](https://github.com/Medtronic-LABS/frappe_spice_next_core) | Frappe apps | Frappe (Python) | `main` | `bench --site {site} run-tests --app spice_next_core` / `ruff check spice_next_core/` / `bench build --app spice_next_core` | needs the frappe env (`env/frappe`); site from `env/frappe/.env` |
 | `shukhee` | [leapwell_shukhee_integration](https://github.com/Medtronic-LABS/leapwell_shukhee_integration) | Frappe apps | Frappe (Python) | `main` | `bench --site {site} run-tests --app shukhee_integration` / `ruff check .` / `bench build --app shukhee_integration` | needs the frappe env (`env/frappe`); site from `env/frappe/.env` |
 | `ai` | [leapfrog-ai-service](https://github.com/Medtronic-LABS/leapfrog-ai-service) | AI Scribe | Python FastAPI | `develop` | `pytest -q` / `ruff check .` / none | no build step |
-| `coaching` | [spice-coaching](https://github.com/Medtronic-LABS/spice-coaching) | Micro-coaching | Python | `leapwell-main` | `python -m pytest` / `ruff check .` / none | no build step |
-| `coaching-android` | [spice-coaching-android](https://github.com/Medtronic-LABS/spice-coaching-android) | Micro-coaching | Kotlin | `leapwell-main` | `./gradlew :sdk-android:test` / none / `./gradlew :sdk-android:assembleDebug` | lint not documented - check README |
-| `coaching-dashboard` | [spice-coaching-dashboard-ui](https://github.com/Medtronic-LABS/spice-coaching-dashboard-ui) | Micro-coaching | TypeScript/Vite | `leapwell-main` | `npm run test -- --run` / `npm run lint` / `npm run build` | |
+| `coaching` | [spice-coaching](https://github.com/Medtronic-LABS/spice-coaching) | Micro-coaching | Python | `development` | `python -m pytest` / `ruff check .` / none | no build step |
+| `coaching-android` | [spice-coaching-android](https://github.com/Medtronic-LABS/spice-coaching-android) | Micro-coaching | Kotlin | `development` | `./gradlew :sdk-android:test` / none / `./gradlew :sdk-android:assembleDebug` | lint not documented - check README |
+| `coaching-dashboard` | [spice-coaching-dashboard-ui](https://github.com/Medtronic-LABS/spice-coaching-dashboard-ui) | Micro-coaching | TypeScript/Vite | `develop` | `npm run test -- --run` / `npm run lint` / `npm run build` | |
 
 `{site}` is the Frappe site name from `env/frappe/.env`. The Frappe repos run their checks inside the bench
 (`env/frappe/README.md`). Each repo's branch protection, own build/test CI and extra tooling stay the repo's own;
