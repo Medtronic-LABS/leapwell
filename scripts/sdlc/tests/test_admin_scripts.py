@@ -227,6 +227,22 @@ class AdminScriptsTest(unittest.TestCase):
             self.assertIn("api graphql --input -", calls)
             self.assertNotIn("singleSelectOptions", calls)
 
+    def test_project_apply_continues_when_issue_types_are_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "calls.log"
+            bin_dir = Path(tmp) / "bin"
+            bin_dir.mkdir()
+            fake = bin_dir / "gh"
+            fake.write_text(f'#!/bin/sh\necho "$@" >> "{log}"\ncase "$*" in *createIssueType*) exit 1 ;; esac\n')
+            fake.chmod(fake.stat().st_mode | stat.S_IXUSR)
+            env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
+            r = self.run_script("setup_project.sh", "--apply", env=env)
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("Not created: issue type(s) Epic Story Subtask", r.stderr)
+            calls = log.read_text()
+            self.assertIn("createProjectV2View", calls, "later steps still ran")
+            self.assertIn("api graphql --input -", calls)
+
     def test_discussions_dry_run_lists_ui_steps(self):
         out = self.run_script("setup_discussions.sh").stdout
         for category in ["Ideas", "Field feedback", "Partner requests", "Q&A", "Announcements"]:

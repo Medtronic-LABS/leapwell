@@ -113,18 +113,23 @@ done < <(manifest_repos)
 # --- issue types (org-wide) --------------------------------------------------------------------
 echo
 echo "-- Issue types (org-wide: they appear in every $OWNER repo) --"
+MISSING_TYPES=()
 for entry in "${ISSUE_TYPES[@]}"; do
   IFS='|' read -r type_name type_color type_description <<<"$entry"
   if state_has type "$type_name"; then
     echo "Issue type $type_name already exists; leaving it alone."
   else
+    # Needs more rights than the rest of the script, so a refusal is reported and the run continues.
     # shellcheck disable=SC2016
-    run gh api graphql -f owner="$ORG_ID" -f name="$type_name" -f description="$type_description" \
+    if ! run gh api graphql -f owner="$ORG_ID" -f name="$type_name" -f description="$type_description" \
       -f color="$type_color" -f query='
       mutation($owner: ID!, $name: String!, $description: String!, $color: IssueTypeColor!) {
         createIssueType(input: {ownerId: $owner, name: $name, description: $description,
                                 color: $color, isEnabled: true}) { issueType { id name } }
-      }'
+      }'; then
+      echo "Could not create issue type $type_name." >&2
+      MISSING_TYPES+=("$type_name")
+    fi
   fi
 done
 echo "  If GitHub refuses (needs an org owner and the admin:org scope): gh auth refresh -s admin:org,"
@@ -274,3 +279,11 @@ echo "  * Active Sprint     column field: Status; field sum: $POINTS_FIELD; slic
 echo "  * Release Roadmap   dates: Start date -> Target date; markers: $SPRINT_FIELD, Milestone"
 echo "  * My Work           group by Status"
 echo "  Insights charts and the full checklist: docs/process/ADMIN_SETUP.md section 3."
+
+
+if [ "${#MISSING_TYPES[@]}" -gt 0 ]; then
+  echo >&2
+  echo "Not created: issue type(s) ${MISSING_TYPES[*]}. Everything else above ran." >&2
+  echo "Grant the scope (gh auth refresh -s admin:org) and re-run, or create them in the UI." >&2
+  exit 1
+fi
