@@ -9,7 +9,8 @@ every path below is relative to it. Run `/lw-setup` once to clone the code repos
 
 Process lives in one place: `docs/process/SDLC.md` (sizes, Definition of Ready/Done, branching, PRs, CI, release).
 Also `TICKETS.md` (PM/QA guide), `REQUIREMENTS.md` (Discussions to sub-issues, Wiki and mockup rules),
-`ADMIN_SETUP.md` (owner rollout), `REPOS.md` (repo table). Do not copy process rules elsewhere.
+`BOARD.md` (issue-type hierarchy, sprints, board views), `ADMIN_SETUP.md` (owner rollout), `REPOS.md` (repo table).
+Do not copy process rules elsewhere.
 
 ## Workspace map
 

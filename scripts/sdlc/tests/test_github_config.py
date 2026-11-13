@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from scripts.sdlc import repos
-from scripts.sdlc.patterns import REQUIRED_SECTIONS
+from scripts.sdlc.patterns import ISSUE_TYPES, REQUIRED_SECTIONS
 
 ROOT = Path(__file__).resolve().parents[3]
 GITHUB = ROOT / ".github"
@@ -46,8 +46,13 @@ class IssueFormsTest(unittest.TestCase):
             self.assertRegex(text, rf'(?m)^labels: \["type:{issue_type}"\]$')
             self.assertIn(f'title: "[{issue_type.capitalize()}] "', text)
 
+    def test_forms_set_the_native_issue_type(self):
+        for issue_type, native in ISSUE_TYPES.items():
+            text = read(f"ISSUE_TEMPLATE/{issue_type}.yml")
+            self.assertRegex(text, rf"(?m)^type: {native}$", issue_type)
+
     def test_issue_forms_end_with_required_privacy_checkbox(self):
-        for issue_type in ("bug", "feature", "task"):
+        for issue_type in ("bug", "feature", "task", "epic"):
             self.assert_privacy_last(read(f"ISSUE_TEMPLATE/{issue_type}.yml"))
 
     def test_bug_repo_dropdown_matches_manifest_areas(self):
@@ -126,6 +131,7 @@ class LabelsTest(unittest.TestCase):
             "type:feature",
             "type:task",
             "type:release",
+            "type:epic",
             "status:needs-info",
             "status:routed",
             "status:triage",
@@ -197,6 +203,13 @@ class WorkflowsTest(unittest.TestCase):
         self.assertIn("status:triage", text)
         self.assertIn("needs_triage", text)
         self.assertNotIn("label create", text, "labels come from labels.yml, not the workflow")
+
+    def test_issue_check_sets_the_issue_type_without_blocking_intake(self):
+        text = read("workflows/issue-check.yml")
+        step = text.split("- name: Set the native issue type", 1)[1].split("- name:", 1)[0]
+        self.assertIn("scripts/sdlc/issue_types.py --event", step)
+        self.assertIn("--apply", step)
+        self.assertIn("continue-on-error: true", step)
 
 
 if __name__ == "__main__":

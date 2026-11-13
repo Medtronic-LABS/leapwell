@@ -29,6 +29,7 @@ Ask what they want to file unless it is obvious from their message, then confirm
 - **Feature** - a new capability or improvement -> `references/feature.md`
 - **Task** - chore, refactor, tech debt, internal work -> `references/task.md`
 - **Release** - track a release (maintainers only) -> `references/release.md`
+- **Epic** - a large goal that groups several features (PM / lead) -> `references/epic.md`
 
 Read the matching reference file now; it holds the questions, choices, derivation rules and the exact body template.
 
@@ -62,7 +63,7 @@ In Claude Code inside the leapwell checkout, also run the repo's checker on the 
 **Screenshots:** you cannot attach images. Tell the user they can drag screenshots into the issue on GitHub after it is created - only if the screenshot shows training/test data and no real patient or member details.
 
 ### 5. Labels
-- Always the **type label**: `type:bug`, `type:feature`, `type:task` or `type:release`.
+- Always the **type label**: `type:bug`, `type:feature`, `type:task`, `type:release` or `type:epic`. The `issue-check` workflow sets the native issue type from it (a feature becomes a Story); do not set the type yourself.
 - **Repo label only if the reporter knew it.** If they named the repo/component (or it is unmistakable, e.g. "the dashboard"), add one `area:<key>` from the table and confirm it. Otherwise add `status:triage` - a developer routes it. Never guess a repo.
 - Bugs: the `env:*` label from Build flavor - prod -> `env:prod`, training -> `env:training`, dev -> `env:dev`.
 - **Priority is a suggestion only.** Propose `prio:P0`-`prio:P3` with a one-line reason (rules in the reference file). Do **not** add a `prio:*` label; write the suggestion in the body's `### Suggested priority` section. Say clearly that the team sets priority at triage - never tell the user priority is set.
@@ -89,7 +90,7 @@ Body:
 
 Then ask: "Shall I create this issue? (yes / change something)". Create it **only** after an explicit yes. Any edit -> re-scrub and show the preview again.
 
-Title rules: start with the form prefix (`[Bug] `, `[Feature] `, `[Task] `, `[Release] `), 80 characters or fewer, say what is wrong or wanted and where ("[Bug] Sync stuck at 90% after adding a household member").
+Title rules: start with the form prefix (`[Bug] `, `[Feature] `, `[Task] `, `[Release] `, `[Epic] `), 80 characters or fewer, say what is wrong or wanted and where ("[Bug] Sync stuck at 90% after adding a household member").
 
 ### 7. Create
 **Claude Code:**
@@ -110,7 +111,7 @@ Reply with the issue link, the labels applied, the suggested priority (as a sugg
 1. Show the final scrubbed title and body as Markdown in one copyable block.
 2. Give a prefilled link built from the reference file's field ids, URL-encoding every value:
    `https://github.com/Medtronic-LABS/leapwell/issues/new?template=<type>.yml&title=<urlencoded title>&<field-id>=<urlencoded value>...`
-   (`<type>` is `bug`, `feature`, `task` or `release`). If the link would be longer than about 6000 characters, leave the long text fields out of it and tell the user to paste those sections from the block.
+   (`<type>` is `bug`, `feature`, `task`, `release` or `epic`). If the link would be longer than about 6000 characters, leave the long text fields out of it and tell the user to paste those sections from the block.
 3. Tell the user to open the link, check each field, tick the Privacy check box, add the labels if they can (otherwise triage will), and submit.
 
 ## Never

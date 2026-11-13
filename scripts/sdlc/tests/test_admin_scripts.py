@@ -1,10 +1,12 @@
 """Tests for scripts/github/*.sh: dry-run by default, nothing mutating without --apply."""
 
+import json
 import os
 import stat
 import subprocess
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 
 from scripts.sdlc import repos
@@ -144,16 +146,102 @@ class AdminScriptsTest(unittest.TestCase):
 
     def test_project_dry_run_content(self):
         out = self.run_script("setup_project.sh").stdout
-        for word in ["P0\\,P1\\,P2\\,P3", "Bug\\,Feature\\,Task\\,Release", "Triage", "QA", "Settings", "project link"]:
+        for word in ["P0\\,P1\\,P2\\,P3", "Triage", "QA", "Settings", "project link"]:
             self.assertIn(word, out)
         self.assertIn("Backlog", out)
         self.assertIn("In review", out)
+        self.assertNotIn("--name Type", out, "native issue types replace the Type field")
 
     def test_project_never_mutates_status(self):
         out = self.run_script("setup_project.sh").stdout
         self.assertNotIn("--name Status", out)
-        self.assertNotIn("updateProjectV2Field", out)
+        # The only field update is a rename; an option list in a mutation can wipe item values.
+        self.assertEqual(out.count("updateProjectV2Field("), 1)
+        self.assertNotIn("singleSelectOptions", out)
         self.assertIn("UI", out)
+
+    def test_project_never_deletes_or_changes_existing_objects(self):
+        out = self.run_script("setup_project.sh").stdout
+        for forbidden in ("deleteProjectV2", "deleteIssueType", "updateIssueType", "archiveProjectV2Item"):
+            self.assertNotIn(forbidden, out)
+
+    def test_project_links_every_repo(self):
+        out = self.run_script("setup_project.sh").stdout
+        self.assertIn("--repo Medtronic-LABS/leapwell ", out)
+        for repo in repos.load().repos:
+            self.assertIn(f"project link 4 --owner Medtronic-LABS --repo Medtronic-LABS/{repo.name} ", out)
+
+    def test_project_issue_types_and_views(self):
+        out = self.run_script("setup_project.sh").stdout
+        for name in ("name=Epic", "name=Story", "name=Subtask"):
+            self.assertIn(name, out)
+        self.assertEqual(out.count("createIssueType("), 3)
+        views = {
+            "Product\\ Backlog": "filter=is:open ",
+            "Sprint\\ Planning": "filter=is:open\\ -type:Epic",
+            "Active\\ Sprint": "filter=sprint:@current\\ -type:Epic",
+            "Release\\ Roadmap": "filter=type:Epic",
+            "My\\ Work": "filter=assignee:@me\\ is:open",
+        }
+        for name, view_filter in views.items():
+            self.assertIn(f"name={name}", out)
+            self.assertIn(view_filter, out)
+        self.assertEqual(out.count("createProjectV2View("), 5)
+
+    def test_project_sprints_are_back_to_back_fortnights(self):
+        out = self.run_script("setup_project.sh").stdout
+        body = out.split("gh api graphql --input - <<'JSON'\n", 1)[1].split("\nJSON\n", 1)[0]
+        config = json.loads(body)["variables"]["input"]
+        self.assertEqual((config["dataType"], config["name"]), ("ITERATION", "Sprint"))
+        sprints = config["iterationConfiguration"]["iterations"]
+        self.assertEqual(len(sprints), 12)
+        self.assertEqual((sprints[0]["title"], sprints[0]["startDate"]), ("Sprint 01", "2026-11-16"))
+        self.assertEqual((sprints[1]["title"], sprints[1]["startDate"]), ("Sprint 02", "2026-11-30"))
+        self.assertTrue(all(s["duration"] == 14 for s in sprints))
+        self.assertTrue(all(date.fromisoformat(s["startDate"]).weekday() == 0 for s in sprints), "Mondays")
+
+    def test_project_sprint_settings_are_overridable(self):
+        env = dict(self.env, SPRINT_START="2027-01-04", SPRINT_DAYS="21", SPRINT_COUNT="2")
+        out = self.run_script("setup_project.sh", env=env).stdout
+        self.assertIn('"startDate": "2027-01-25"', out)
+        self.assertNotIn("Sprint 03", out)
+
+    def test_project_story_points_is_a_rename_of_the_unused_estimate_field(self):
+        out = self.run_script("setup_project.sh").stdout
+        self.assertIn("name=Story\\ Points", out)
+        self.assertIn("field=\\<Estimate-id\\>", out)
+
+    def test_project_apply_reads_state_first_and_writes_with_gh(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "calls.log"
+            bin_dir = Path(tmp) / "bin"
+            bin_dir.mkdir()
+            make_fake_gh(bin_dir, log, 0)
+            env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
+            r = self.run_script("setup_project.sh", "--apply", env=env)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            calls = log.read_text()
+            self.assertIn("issueTypes(first: 50)", calls.split("project link", 1)[0], "state is read before any write")
+            self.assertEqual(calls.count("project link 4"), 8)
+            self.assertIn("createIssueType", calls)
+            self.assertIn("api graphql --input -", calls)
+            self.assertNotIn("singleSelectOptions", calls)
+
+    def test_project_apply_continues_when_issue_types_are_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "calls.log"
+            bin_dir = Path(tmp) / "bin"
+            bin_dir.mkdir()
+            fake = bin_dir / "gh"
+            fake.write_text(f'#!/bin/sh\necho "$@" >> "{log}"\ncase "$*" in *createIssueType*) exit 1 ;; esac\n')
+            fake.chmod(fake.stat().st_mode | stat.S_IXUSR)
+            env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
+            r = self.run_script("setup_project.sh", "--apply", env=env)
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("Not created: issue type(s) Epic Story Subtask", r.stderr)
+            calls = log.read_text()
+            self.assertIn("createProjectV2View", calls, "later steps still ran")
+            self.assertIn("api graphql --input -", calls)
 
     def test_discussions_dry_run_lists_ui_steps(self):
         out = self.run_script("setup_discussions.sh").stdout

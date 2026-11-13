@@ -39,6 +39,9 @@
 - name: type:release
   color: "5319E7"
   description: "Release tracking"
+- name: type:epic
+  color: "8250DF"
+  description: "Epic: a goal that groups several features"
 - name: area:mobile
   color: "1D76DB"
   description: "Mobile app (uhis_lf_mobile)"
