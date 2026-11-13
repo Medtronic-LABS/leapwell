@@ -2,6 +2,7 @@ name: Release
 description: Track a release (maintainers)
 title: "[Release] "
 labels: ["type:release"]
+type: Task
 body:
   - type: markdown
     attributes:

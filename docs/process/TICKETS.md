@@ -26,6 +26,8 @@ ticket, and creates it **only after you say yes**. You get the link back.
 - **Feature:** who needs it, the problem today, the idea, how we will know it works, which programme
   (ANC, NCD, ...), and what should happen offline.
 - **Task:** what, why now, and the risk if we don't do it.
+- **Epic** (PM or lead): a large goal that groups several features: the goal, what is in and out, and how
+  we will know it is done. Features are then added under it.
 
 If you don't know something (for example the app version), say so; Claude helps you find it or marks it
 unknown. It suggests a priority, but the team sets the real priority at triage.
@@ -46,14 +48,14 @@ comment. Only screenshots from **test data**, never a real patient.
 ## No Claude? Use the web forms
 
 Open <https://github.com/Medtronic-LABS/leapwell/issues/new/choose>, pick Bug report, Feature request,
-Task or Release, fill every required field and tick the privacy box.
+Task, Release or Epic, fill every required field and tick the privacy box.
 
 ## What happens next
 
 1. The ticket is added to the LeapWell board in **Triage**. If something is missing, a bot adds
    `status:needs-info` and comments what to add; edit the ticket and the label goes away.
 2. The team triages **twice a week**: sets priority, size and owner, and moves it on
-   (Triage → Backlog → Ready → ... → Done).
+   (Triage → Backlog → Ready → ... → Done). Work is planned in two-week sprints ([BOARD.md](BOARD.md)).
 3. A developer routes it (`/lw-route`) into one sub-issue per affected repo. The ticket gets
    `status:routed` and you can follow progress through its sub-issues.
 4. When every sub-issue is closed, the ticket closes itself within the hour with a comment listing them.
@@ -62,7 +64,7 @@ Task or Release, fill every required field and tick the privacy box.
 
 | Label | Meaning |
 |---|---|
-| `type:bug` / `type:feature` / `type:task` / `type:release` | Bug, feature request, internal task, release tracking |
+| `type:bug` / `type:feature` / `type:task` / `type:release` / `type:epic` | Bug, feature request (a Story on the board), internal task, release tracking, epic |
 | `area:*` | Repo or part of the product (e.g. `area:mobile`, `area:sync`, `area:ai`) |
 | `env:prod` / `env:training` / `env:dev` | Which build the bug was seen in |
 | `prio:P0` | Drop everything: health workers cannot work |

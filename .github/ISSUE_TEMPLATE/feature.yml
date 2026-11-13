@@ -2,6 +2,7 @@ name: Feature request
 description: Propose a new capability or improvement
 title: "[Feature] "
 labels: ["type:feature"]
+type: Story
 body:
   - type: markdown
     attributes:

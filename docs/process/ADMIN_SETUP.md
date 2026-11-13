@@ -31,7 +31,7 @@ Needs `gh` signed in as a repo admin (`gh auth refresh -s project` for the proje
 ```sh
 bash scripts/github/sync_labels.sh --all-repos       # dry-run: labels from .github/labels.yml, also in the code repos
 bash scripts/github/sync_labels.sh --all-repos --apply
-bash scripts/github/setup_project.sh                 # links leapwell to Project #4; Priority and Type fields
+bash scripts/github/setup_project.sh                 # Project #4 for Scrum: repo links, issue types, fields, views
 bash scripts/github/setup_project.sh --apply
 bash scripts/github/protect_branches.sh              # leapwell main: 1 approval, CODEOWNERS, required checks
 bash scripts/github/protect_branches.sh --apply
@@ -41,21 +41,54 @@ Required checks on leapwell `main`: `pr-check`, `sdlc-scripts`, `lint`, `secret-
 branch-protection picker only after they have run once; the script sets them by name through the API anyway.
 Until the workflows are on `main` and have run, PRs wait on those checks. Code repos are protected by their own owners.
 
-`setup_project.sh` never edits **Status** (the API replaces the whole option list and can wipe item values). In the
+`setup_project.sh` sets the board up as described in [BOARD.md](BOARD.md). It creates only what is missing and never
+changes or deletes an existing type, field, view or README:
+
+- links leapwell and the seven code repos to the project;
+- adds the org-wide issue types Epic, Story and Subtask. This needs an org owner and the `admin:org` scope
+  (`gh auth refresh -s admin:org`); otherwise create them in the UI under Organization → Settings → Planning → Issue types;
+- creates the `Sprint` iteration field (start date, length and count are `SPRINT_START`, `SPRINT_DAYS`, `SPRINT_COUNT`
+  at the top of the script) and renames the template's unused `Estimate` field to `Story Points`;
+- creates the views Product Backlog, Sprint Planning, Active Sprint, Release Roadmap and My Work with their filters.
+
+It never edits **Status** (the API replaces the whole option list and can wipe item values). In the
 UI: Project → Settings → Status → add `Triage` at the top and `QA` between `In review` and `Done`. Target order:
 Triage, Backlog, Ready, In progress, In review, QA, Done.
 
-## 3. Project #4 built-in workflows
+Afterwards `python3 -m scripts.sdlc.project_board reconcile` (dry-run, then `--apply`) adds open issues missing from
+the board and sets missing issue types.
 
-Project → Workflows (UI only), enable:
+## 3. Project #4: workflows, view layout and charts (UI only)
+
+Project → Workflows, enable:
 
 | Workflow | Setting |
 |---|---|
-| Auto-add to project | filter `repo:Medtronic-LABS/leapwell is:issue`; add one more Auto-add workflow per code repo to show sub-issues (the Repository field separates the two levels) |
+| Auto-add to project | filter `repo:Medtronic-LABS/leapwell is:issue`. The Free plan allows one Auto-add workflow; code-repo sub-issues arrive through "Auto-add sub-issues to project", which must stay enabled (the Repository field separates the two levels) |
 | Item added to project | set Status = Triage |
 | Item closed | set Status = Done |
 | Pull request merged | set Status = Done |
 | Item reopened | set Status = In progress |
+
+The API cannot set grouping, sorting, sums or slices. Open each new view and set, from the view menu:
+
+| View | Setting |
+|---|---|
+| Product Backlog | Show sub-issue hierarchy; sort by Priority |
+| Sprint Planning | Group by Sprint; field sum Story Points; slice by Assignees |
+| Active Sprint | Column field Status; field sum Story Points; slice by Type |
+| Release Roadmap | Dates Start date to Target date; markers Sprint and Milestone |
+| My Work | Group by Status |
+
+Then delete the five template views (Backlog, Priority board, Team items, Roadmap, My items) if they are no longer wanted.
+
+Project → Insights → New chart, three charts (current data only; historical charts need a paid plan):
+
+| Chart | Configuration |
+|---|---|
+| Sprint commitment | X-axis Sprint; Y-axis sum of Story Points; group by Status |
+| Work in progress | Filter `sprint:@current -type:Epic`; X-axis Status; Y-axis count of items |
+| Workload | Filter `sprint:@current -type:Epic`; X-axis Assignees; Y-axis count of items |
 
 ## 4. Discussions
 

@@ -44,6 +44,7 @@ Run the repo's own checks with `python3 -m unittest discover -s scripts -t .`.
 
 - [docs/process/SDLC.md](docs/process/SDLC.md): the process, sizes, gates, release, hotfix, agents
 - [docs/process/TICKETS.md](docs/process/TICKETS.md): one-page filing guide for PM and QA
+- [docs/process/BOARD.md](docs/process/BOARD.md): the project board: issue types, sprints, views, planning checklist
 - [docs/process/REQUIREMENTS.md](docs/process/REQUIREMENTS.md): Discussions, promotion, routing, Wiki and mockup rules
 - [docs/process/ADMIN_SETUP.md](docs/process/ADMIN_SETUP.md): owner rollout, secrets, open decisions
 - [docs/process/REPOS.md](docs/process/REPOS.md): the seven repos, branches and verify commands

@@ -88,3 +88,9 @@ jobs:
         run: |
           gh issue edit "$ISSUE_NUMBER" --add-label "$TRIAGE_LABEL"
           echo "Added $TRIAGE_LABEL."
+
+      # Epic / Story / Task / Bug from the type label, so the board's type filters work for issues
+      # filed by any route. A failure (e.g. the org type does not exist yet) must not fail intake.
+      - name: Set the native issue type
+        continue-on-error: true
+        run: python3 scripts/sdlc/issue_types.py --event "$GITHUB_EVENT_PATH" --apply

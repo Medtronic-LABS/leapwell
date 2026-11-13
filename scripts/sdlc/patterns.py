@@ -149,6 +149,7 @@ REQUIRED_SECTIONS: dict[str, list[str]] = {
     ],
     "task": ["What", "Why now", "Risk if not done", PRIVACY_HEADING],
     "release": ["Version", "Release checklist"],
+    "epic": ["Goal", "Scope", "Success measures", PRIVACY_HEADING],
 }
 
 TYPE_LABELS: dict[str, str] = {
@@ -156,6 +157,7 @@ TYPE_LABELS: dict[str, str] = {
     "type:feature": "feature",
     "type:task": "task",
     "type:release": "release",
+    "type:epic": "epic",
 }
 
 TITLE_PREFIXES: dict[str, str] = {
@@ -163,6 +165,18 @@ TITLE_PREFIXES: dict[str, str] = {
     "[feature]": "feature",
     "[task]": "task",
     "[release]": "release",
+    "[epic]": "epic",
+}
+
+# Intake kind -> native GitHub issue type (org-level). A feature request is a Jira-style Story;
+# a release has no Jira counterpart and is tracked as a Task. Sub-issues are typed from their
+# parent by scripts.sdlc.issue_types.child_type.
+ISSUE_TYPES: dict[str, str] = {
+    "epic": "Epic",
+    "feature": "Story",
+    "bug": "Bug",
+    "task": "Task",
+    "release": "Task",
 }
 
 BRANCH_RE = re.compile(r"^(feat|fix|chore|docs|refactor|test|hotfix)/\d+-[\w.-]+$")

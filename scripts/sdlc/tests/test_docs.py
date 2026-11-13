@@ -5,13 +5,14 @@ import re
 import unittest
 from pathlib import Path
 
-from scripts.sdlc.patterns import find_sensitive
+from scripts.sdlc.patterns import ISSUE_TYPES, find_sensitive
 
 ROOT = Path(__file__).resolve().parents[3]
 PROCESS = ROOT / "docs" / "process"
 WIKI = ROOT / "wiki"
 MOCKUPS = ROOT / "mockups"
-DOCS = ("SDLC.md", "TICKETS.md", "REQUIREMENTS.md", "ADMIN_SETUP.md", "REPOS.md")
+DOCS = ("SDLC.md", "TICKETS.md", "REQUIREMENTS.md", "ADMIN_SETUP.md", "REPOS.md", "BOARD.md")
+BOARD_VIEWS = ("Product Backlog", "Sprint Planning", "Active Sprint", "Release Roadmap", "My Work")
 FEATURE_PAGES = (
     "Feature-AI-Scribe",
     "Feature-Visit-Briefing",
@@ -192,6 +193,27 @@ class ProcessDocsTest(unittest.TestCase):
         ):
             self.assertIn(name, script)
             self.assertIn(name, admin)
+
+    def test_board_guide_matches_the_tooling(self):
+        board = read(PROCESS / "BOARD.md")
+        script = read(ROOT / "scripts/github/setup_project.sh")
+        admin = read(PROCESS / "ADMIN_SETUP.md")
+        for view in BOARD_VIEWS:
+            for text in (board, script, admin):
+                self.assertIn(view, text, view)
+        for issue_type in sorted(set(ISSUE_TYPES.values()) | {"Subtask"}):
+            self.assertIn(f"| {issue_type} |", board, issue_type)
+        for phrase in (
+            "project_board reconcile",
+            "project_board sprint-sync",
+            "no:type",
+            "Story Points",
+            "scripts/sdlc/patterns.py",
+        ):
+            self.assertIn(phrase, board)
+        self.assertNotIn(" → ".join(STATUS_FLOW), board, "the Status flow lives in SDLC.md only")
+        self.assertIn("[BOARD.md](BOARD.md)", read(PROCESS / "SDLC.md"))
+        self.assertIn("`BOARD.md`", read(ROOT / "CLAUDE.md"))
 
     def test_protected_checks_match_script(self):
         script = read(ROOT / "scripts/github/protect_branches.sh")

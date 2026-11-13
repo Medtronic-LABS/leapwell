@@ -7,6 +7,7 @@ Design record: [`docs/superpowers/specs/2026-11-04-leapwell-hub-design.md`](../s
 
 - **Tracker:** GitHub Issues in `Medtronic-LABS/leapwell` plus org Project "LeapWell" (#4). The old Jira
   project (LEAP) is retired; the 412 existing `uhis_lf_mobile` issues stay where they are.
+- **Board:** issue types (Epic, Story, Task, Subtask, Bug), two-week sprints and views: [BOARD.md](BOARD.md).
 - **Repo facts** (names, integration branches, verify commands): [REPOS.md](REPOS.md), generated from `repos.json`.
 - **The repo and the code repos are public** (except `leapfrog-ai-service`, which is private but treated the
   same way). No patient/member data, names, phone numbers, IDs, credentials, tokens, env values or

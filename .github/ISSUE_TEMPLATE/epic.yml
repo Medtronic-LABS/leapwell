@@ -1,0 +1,45 @@
+name: Epic
+description: A large goal that groups several features (stories) and spans sprints
+title: "[Epic] "
+labels: ["type:epic"]
+type: Epic
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository is public. Do not paste patient or member data, names, phone numbers, IDs, credentials, tokens or unscrubbed logs.
+        An epic has no steps or acceptance criteria of its own: add feature requests as its sub-issues.
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: The outcome this epic delivers, and for whom.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is in, and what is deliberately left out.
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: Success measures
+      description: How we will know the epic is done.
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Target release or date
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: This issue contains no patient/member data, names, phone numbers, IDs, credentials, tokens or unscrubbed logs (this repo is public)
+          required: true
