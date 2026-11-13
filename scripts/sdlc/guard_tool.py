@@ -1,0 +1,493 @@
+"""Claude Code PreToolUse hook: deny risky git/gh operations, human-only gates and secret-file access.
+
+Reads the hook payload JSON on stdin. On deny, prints the reason to stderr and
+exits 2; otherwise exits 0 silently. Malformed input is always allowed.
+"""
+
+import fnmatch
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any, NamedTuple
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.sdlc import repos
+from scripts.sdlc.patterns import is_protected_path  # noqa: E402
+
+BranchResolver = Callable[[str], str | None]
+
+FALLBACK_PROTECTED_BRANCHES = {"main", "develop"}
+FILE_TOOLS = {"Read", "Edit", "Write"}
+DISPLAY_COMMANDS = {"cat", "less", "more", "head", "tail", "bat", "nl", "xxd", "strings", "base64"}
+# Programs that print, copy, send or load a file they are given. Build tools that only consume an
+# env file (flutter --dart-define-from-file, docker compose --env-file) are deliberately absent.
+READ_COMMANDS = DISPLAY_COMMANDS | {
+    "grep",
+    "egrep",
+    "fgrep",
+    "rg",
+    "ag",
+    "sed",
+    "awk",
+    "gawk",
+    "jq",
+    "yq",
+    "cut",
+    "sort",
+    "uniq",
+    "tr",
+    "diff",
+    "cmp",
+    "comm",
+    "od",
+    "hexdump",
+    "cp",
+    "mv",
+    "scp",
+    "rsync",
+    "tee",
+    "dd",
+    "zip",
+    "tar",
+    "gzip",
+    "vi",
+    "vim",
+    "nvim",
+    "nano",
+    "emacs",
+    "code",
+    "open",
+    "curl",
+    "wget",
+    "source",
+    ".",
+    "python",
+    "python3",
+    "node",
+    "ruby",
+    "perl",
+    "php",
+    "deno",
+    "bun",
+}
+REDIRECTS = {"<", ">", ">>"}
+GIT_READ_SUBCOMMANDS = {"show", "cat-file", "diff", "grep", "log", "blame"}
+GREP_PROGRAMS = {"grep", "egrep", "fgrep"}
+GREP_RECURSIVE_LONG = ("--recursive", "--dereference-recursive", "--directories=recurse")
+RG_UNIGNORE_LONG = ("--no-ignore", "--hidden", "--unrestricted")
+SECRET_READ_DENY = "Reading or copying secret/config files (env*.json, key.properties, keystores, .env) is blocked."
+RECURSIVE_GREP_DENY = (
+    "Recursive search that includes gitignored files can print secret/config files (env*.json, .env, "
+    "key.properties). Use `rg` or `git grep`, which skip gitignored files."
+)
+# Splits code and option values (`open('x/env.json')`, `HEAD:env.json`, `-d @env.json`) into path-like pieces.
+_PATH_PIECE_SPLIT_RE = re.compile(r"[\"'=(),:<>@]")
+SHELLS = {"bash", "sh", "zsh"}
+WRAPPERS = {"command", "sudo", "env", "nohup", "exec", "time"}
+COMMIT_VALUE_OPTS = {"-m", "-F", "-c", "-C", "--message", "--file", "--author", "--date", "--template"}
+COMMIT_VALUE_SHORT_FLAGS = "mFcC"
+OPERATORS = {"&&", "||", ";", "|", "&"}
+GIT_OPTS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
+PUSH_FORCE_LONG = ("--force", "--force-with-lease", "--force-if-includes")
+PUSH_ALL_FLAGS = {"--all", "--mirror"}
+GREP_DENY = "Searching secret/config files (env*.json, key.properties, keystores, .env) is blocked."
+# Representative secret/config file names; a Grep glob matching any of them is denied.
+PROTECTED_SAMPLE_PATHS = (
+    "env.production.json",
+    "env.training.json",
+    "env.development.json",
+    "android/key.properties",
+    "android/app/upload.jks",
+    "android/app/release.keystore",
+    "android/app/google-services.json",
+    "ios/Runner/GoogleService-Info.plist",
+    ".env",
+    ".env.local",
+)
+GH_REPO_VALUE_OPTS = {"-R", "--repo"}
+GH_RELEASE_WRITES = {"create", "edit", "delete", "upload", "delete-asset"}
+GH_API_METHOD_OPTS = {"-X", "--method"}
+GH_API_FIELD_OPTS = {"-f", "-F", "--field", "--raw-field", "--input"}
+MUTATING_METHODS = {"PUT", "POST", "PATCH", "DELETE"}
+TAG_LIST_LONG = ("--list", "--verify", "--contains", "--points-at", "--merged", "--no-merged")
+TAG_PUSH_LONG = ("--tags", "--follow-tags")
+_PROTECTION_PATH_RE = re.compile(r"(^|/)repos/[^/]+/[^/]+/(branches/.+/protection|rulesets)(/|$|\?)")
+_ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+_SHORT_CLUSTER_RE = re.compile(r"^-[A-Za-z]+$")
+
+
+def protected_branches() -> set[str]:
+    """Union of every repo's protected branches; a safe default when the manifest is unusable."""
+    try:
+        return repos.load().protected_branches()
+    except (OSError, ValueError):
+        return set(FALLBACK_PROTECTED_BRANCHES)
+
+
+def git_current_branch(cwd: str) -> str | None:
+    try:
+        done = subprocess.run(
+            ["git", "-C", cwd, "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return done.stdout.strip() or None if done.returncode == 0 else None
+
+
+def tokenize(command: str) -> list[str]:
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
+    lexer.whitespace_split = True
+    try:
+        return list(lexer)
+    except ValueError:
+        return command.split()
+
+
+def split_segments(tokens: list[str]) -> list[list[str]]:
+    segments: list[list[str]] = [[]]
+    for token in tokens:
+        if token in OPERATORS:
+            segments.append([])
+        else:
+            segments[-1].append(token)
+    return [segment for segment in segments if segment]
+
+
+def strip_prefixes(segment: list[str]) -> list[str]:
+    """Drop leading VAR=val assignments and wrappers (sudo, env, ...) plus their flags."""
+    index = 0
+    after_wrapper = False
+    while index < len(segment):
+        token = segment[index]
+        if _ENV_ASSIGN_RE.match(token):
+            pass
+        elif os.path.basename(token) in WRAPPERS:
+            after_wrapper = True
+        elif not (after_wrapper and token.startswith("-")):
+            break
+        index += 1
+    return segment[index:]
+
+
+class GitInvocation(NamedTuple):
+    config: list[str]
+    directory: str | None
+    subcommand: str | None
+    args: list[str]
+
+
+def parse_git(args: list[str]) -> GitInvocation:
+    """Split the args after `git` into global options, subcommand and its args."""
+    config: list[str] = []
+    directory: str | None = None
+    index = 0
+    while index < len(args) and args[index].startswith("-"):
+        option = args[index]
+        value = args[index + 1] if index + 1 < len(args) else ""
+        if option == "-c":
+            config.append(value)
+        elif option == "-C":
+            directory = os.path.join(directory, value) if directory else value
+        index += 2 if option in GIT_OPTS_WITH_VALUE else 1
+    if index >= len(args):
+        return GitInvocation(config, directory, None, [])
+    return GitInvocation(config, directory, args[index], args[index + 1 :])
+
+
+def _has_short_flag(args: list[str], flag: str) -> bool:
+    return any(_SHORT_CLUSTER_RE.match(a) and flag in a[1:] for a in args)
+
+
+def refspec_target(refspec: str) -> str:
+    target = refspec.rpartition(":")[2] if ":" in refspec else refspec
+    return target.lstrip("+").removeprefix("refs/heads/")
+
+
+def _note_unknown_branch() -> None:
+    print("lw-guard: could not determine current branch; bare push allowed", file=sys.stderr)
+
+
+def check_push(args: list[str], cwd: str, current_branch: BranchResolver) -> str | None:
+    if any(a.startswith(PUSH_FORCE_LONG) for a in args) or _has_short_flag(args, "f"):
+        return "Force-push is blocked. Push your feature branch normally."
+    positionals = [a for a in args if not a.startswith("-")]
+    refspecs = positionals[1:]
+    if any(r.startswith("+") for r in refspecs):
+        return "Force-push (+refspec) is blocked. Push your feature branch normally."
+    if PUSH_ALL_FLAGS & set(args):
+        return "Pushing all branches would include main/develop. Push your feature branch by name."
+    branch = current_branch(cwd)
+    if refspecs:
+        targets = {branch if r == "HEAD" else refspec_target(r) for r in refspecs}
+    else:
+        targets = {branch}
+    if branch is None and (not refspecs or "HEAD" in refspecs):
+        _note_unknown_branch()
+    if targets & protected_branches():
+        return (
+            "Direct pushes to protected branches (main, develop, integration branches) are blocked. "
+            "Push a feature branch and open a PR."
+        )
+    return None
+
+
+def gh_positionals(args: list[str]) -> list[str]:
+    """Non-flag words of a gh invocation, skipping the values of -R/--repo."""
+    words: list[str] = []
+    skip_value = False
+    for token in args:
+        if skip_value:
+            skip_value = False
+        elif token in GH_REPO_VALUE_OPTS:
+            skip_value = True
+        elif not token.startswith("-"):
+            words.append(token)
+    return words
+
+
+def _gh_api_method(args: list[str]) -> str:
+    """HTTP method of a `gh api` call: explicit -X/--method, else POST when fields are sent, else GET."""
+    for index, token in enumerate(args):
+        if token in GH_API_METHOD_OPTS and index + 1 < len(args):
+            return args[index + 1].upper()
+        if token.startswith("--method="):
+            return token.partition("=")[2].upper()
+        if token.startswith("-X") and len(token) > 2:
+            return token[2:].upper()
+    if any(a in GH_API_FIELD_OPTS or a.startswith(("--field=", "--raw-field=", "--input=")) for a in args):
+        return "POST"
+    return "GET"
+
+
+def check_gh(args: list[str]) -> str | None:
+    words = gh_positionals(args)
+    head = words[:2]
+    if head == ["pr", "merge"]:
+        return "humans only: merging a pull request (gh pr merge) is blocked. Ask a person to merge."
+    if head == ["pr", "review"] and any(a in ("--approve", "-a") or a.startswith("--approve=") for a in args):
+        return "humans only: approving a pull request (gh pr review --approve) is blocked."
+    if len(words) >= 2 and words[0] == "release" and words[1] in GH_RELEASE_WRITES:
+        return f"humans only: gh release {words[1]} is blocked. Tagging and publishing releases is a person's call."
+    if words[:1] == ["api"]:
+        paths = [w for w in words[1:] if _PROTECTION_PATH_RE.search(w.lstrip("/"))]
+        if paths and _gh_api_method(args) in MUTATING_METHODS:
+            return "humans only: changing branch protection or rulesets through gh api is blocked."
+    return None
+
+
+def check_git_tag(args: list[str]) -> str | None:
+    if any(a in ("-d", "--delete", "-f", "--force") for a in args) or _has_short_flag(args, "d"):
+        return "humans only: deleting or moving git tags is blocked."
+    is_listing = (
+        any(a.startswith(TAG_LIST_LONG) for a in args)
+        or any(re.match(r"^-n\d*$", a) for a in args)
+        or _has_short_flag(args, "l")
+    )
+    if is_listing or not args:
+        return None
+    return "humans only: creating git tags is blocked (read-only `git tag -l` is fine)."
+
+
+def pushes_tags(args: list[str]) -> bool:
+    if any(a.startswith(TAG_PUSH_LONG) for a in args):
+        return True
+    positionals = [a for a in args if not a.startswith("-")]
+    return "tag" in positionals[1:2] or any("refs/tags/" in r for r in positionals)
+
+
+def commit_skips_hooks(args: list[str]) -> bool:
+    """True when -n is a flag (not the value of -m/-F/...)."""
+    skip_value = False
+    for token in args:
+        if skip_value:
+            skip_value = False
+        elif token in COMMIT_VALUE_OPTS:
+            skip_value = True
+        elif _SHORT_CLUSTER_RE.match(token):
+            if "n" in token[1:]:
+                return True
+            skip_value = token[-1] in COMMIT_VALUE_SHORT_FLAGS
+    return False
+
+
+def check_git(args: list[str], cwd: str, current_branch: BranchResolver) -> str | None:
+    git = parse_git(args)
+    if git.subcommand in ("commit", "push") and any(c.lower().startswith("core.hookspath") for c in git.config):
+        return "Overriding core.hooksPath is blocked (it bypasses the repo hooks)."
+    if git.subcommand == "commit" and commit_skips_hooks(git.args):
+        return "Skipping hooks (-n / --no-verify) is blocked."
+    if git.subcommand == "tag":
+        return check_git_tag(git.args)
+    if git.subcommand == "push" and pushes_tags(git.args):
+        return "humans only: pushing tags (--tags or a refs/tags/ refspec) is blocked."
+    if git.subcommand == "push":
+        repo_dir = os.path.join(cwd, git.directory) if git.directory else cwd
+        return check_push(git.args, repo_dir, current_branch)
+    if git.subcommand == "add" and any(is_protected_path(a) for a in git.args if not a.startswith("-")):
+        return "Staging secret/config files (env*.json, key.properties, keystores, .env) is blocked."
+    if git.subcommand in GIT_READ_SUBCOMMANDS and mentions_protected_path(git.args):
+        return SECRET_READ_DENY
+    return None
+
+
+def mentions_protected_path(tokens: list[str]) -> bool:
+    """True when a token, or a path-like piece of one (code, `ref:path`, `opt=path`), is a secret file."""
+    return any(
+        is_protected_path(piece) for token in tokens for piece in [token, *_PATH_PIECE_SPLIT_RE.split(token)] if piece
+    )
+
+
+def redirects_protected_path(segment: list[str]) -> bool:
+    return any(
+        token in REDIRECTS and index + 1 < len(segment) and is_protected_path(segment[index + 1])
+        for index, token in enumerate(segment)
+    )
+
+
+def searches_ignored_files(program: str, args: list[str]) -> bool:
+    """grep in recursive mode, or rg told to include gitignored/hidden files."""
+    if program in GREP_PROGRAMS:
+        return any(
+            arg.startswith(GREP_RECURSIVE_LONG)
+            or (_SHORT_CLUSTER_RE.match(arg) and ("r" in arg or "R" in arg))
+            or (arg == "-d" and index + 1 < len(args) and args[index + 1] == "recurse")
+            for index, arg in enumerate(args)
+        )
+    if program == "rg":
+        return any(arg.startswith(RG_UNIGNORE_LONG) or (_SHORT_CLUSTER_RE.match(arg) and "u" in arg) for arg in args)
+    return False
+
+
+def check_segment(segment: list[str], cwd: str, current_branch: BranchResolver) -> str | None:
+    segment = strip_prefixes(_drop_group_openers(segment))
+    if not segment:
+        return None
+    if "--no-verify" in segment:
+        return "Skipping hooks (--no-verify) is blocked."
+    program = os.path.basename(segment[0])
+    if program in SHELLS and "-c" in segment[1:-1]:
+        return check_command(segment[segment.index("-c") + 1], cwd, current_branch)
+    if program == "git":
+        return check_git(segment[1:], cwd, current_branch)
+    if program == "gh":
+        return check_gh(segment[1:])
+    if program in DISPLAY_COMMANDS and any(is_protected_path(a) for a in segment[1:]):
+        return "Displaying secret/config files (env*.json, key.properties, keystores, .env) is blocked."
+    if redirects_protected_path(segment) or (program in READ_COMMANDS and mentions_protected_path(segment[1:])):
+        return SECRET_READ_DENY
+    if searches_ignored_files(program, segment[1:]):
+        return RECURSIVE_GREP_DENY
+    return None
+
+
+def check_command(command: str, cwd: str, current_branch: BranchResolver) -> str | None:
+    for segment in split_segments(tokenize(command)):
+        reason = check_segment(segment, cwd, current_branch)
+        if reason:
+            return reason
+        cwd = _after_cd(segment, cwd)
+    return None
+
+
+def _drop_group_openers(segment: list[str]) -> list[str]:
+    """Strip leading `(` / `{` tokens (and a `(cd` glued form) so grouped commands parse like bare ones."""
+    index = 0
+    while index < len(segment) and segment[index] in ("(", "{"):
+        index += 1
+    rest = segment[index:]
+    if rest and rest[0].startswith("(") and len(rest[0]) > 1:
+        rest = [rest[0].lstrip("(")] + rest[1:]
+    while rest and rest[-1] in (")", "}"):
+        rest = rest[:-1]
+    return rest
+
+
+def _after_cd(segment: list[str], cwd: str) -> str:
+    """Directory later segments run in after `cd <path>` (so `cd repos/x && git push` resolves in x)."""
+    words = strip_prefixes(_drop_group_openers(segment))
+    if len(words) == 2 and words[0] in ("cd", "pushd") and not words[1].startswith("-"):
+        return os.path.normpath(os.path.join(cwd, os.path.expanduser(words[1])))
+    return cwd
+
+
+def glob_targets_protected(glob: str) -> bool:
+    """True when a search glob would match a known secret/config file name.
+
+    Conservative: the glob's last segment is matched against file names alone, so
+    `**/env.*.json` and `lib/*.json` both count as targeting env files.
+    """
+    name_glob = glob.rsplit("/", 1)[-1]
+    return any(
+        fnmatch.fnmatch(sample, glob) or fnmatch.fnmatch(os.path.basename(sample), name_glob)
+        for sample in PROTECTED_SAMPLE_PATHS
+    )
+
+
+def check_grep(tool_input: dict) -> str | None:
+    path = tool_input.get("path")
+    if isinstance(path, str) and is_protected_path(path):
+        return GREP_DENY
+    glob = tool_input.get("glob")
+    if isinstance(glob, str) and glob_targets_protected(glob):
+        return GREP_DENY + " Narrow the glob (e.g. lib/**/*.dart)."
+    return None
+
+
+def check_glob(tool_input: dict) -> str | None:
+    path = tool_input.get("path")
+    if isinstance(path, str) and is_protected_path(path):
+        return GREP_DENY
+    pattern = tool_input.get("pattern")
+    if isinstance(pattern, str) and (is_protected_path(pattern) or glob_targets_protected(pattern)):
+        return GREP_DENY + " Narrow the pattern (e.g. lib/**/*.dart)."
+    return None
+
+
+def decide(payload: Any, *, current_branch: BranchResolver = git_current_branch) -> str | None:
+    """Return a deny reason for the hook payload, or None to allow."""
+    if not isinstance(payload, dict):
+        return None
+    tool_input = payload.get("tool_input")
+    if not isinstance(tool_input, dict):
+        return None
+    tool = payload.get("tool_name")
+    if tool in FILE_TOOLS:
+        path = tool_input.get("file_path")
+        if isinstance(path, str) and is_protected_path(path):
+            return "Access to secret/config files (env*.json, key.properties, keystores, .env) is blocked."
+        return None
+    if tool == "Grep":
+        return check_grep(tool_input)
+    if tool == "Glob":
+        return check_glob(tool_input)
+    command = tool_input.get("command")
+    if tool == "Bash" and isinstance(command, str):
+        cwd = payload.get("cwd") if isinstance(payload.get("cwd"), str) else os.getcwd()
+        return check_command(command, cwd, current_branch)
+    return None
+
+
+def main() -> int:
+    try:
+        payload = json.load(sys.stdin)
+        reason = decide(payload)
+    except (json.JSONDecodeError, KeyError, TypeError, AttributeError, ValueError):
+        return 0
+    if reason:
+        print(reason, file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

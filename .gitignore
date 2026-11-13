@@ -20,3 +20,6 @@ __pycache__/
 dist/
 .DS_Store
 .superpowers/
+
+# Frappe dev env data (bench, MariaDB, APFS sparse image)
+/env/frappe/development/

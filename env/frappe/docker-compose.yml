@@ -1,0 +1,99 @@
+# Local Frappe bench for the LeapWell Frappe apps. Run it through frappe_setup.sh (needs a .env, see .env.example).
+# App source comes from the workspace clones in ../../repos (see /lw-setup); nothing is copied into the image.
+services:
+
+  backend:
+    build:
+      context: ./docker/backend-v16
+      dockerfile: Dockerfile
+    image: leapwell-frappe-backend:latest
+    command: sleep infinity
+    restart: unless-stopped
+    volumes:
+      - ./development/workspace:/home/frappe
+      # Workspace clones, mounted outside the bench tree so `bench init` never meets a pre-existing
+      # frappe-bench/apps. frappe_setup.sh links them into frappe-bench/apps/.
+      - ../../repos/frappe_spice_next_core:/workspace-apps/spice_next_core
+      - ../../repos/leapwell_shukhee_integration:/workspace-apps/shukhee_integration
+    environment:
+      - SHELL=/bin/bash
+    # socket.io looks the user up at the site's own URL (nginx sets it as the Origin): the site name must reach the
+    # bench server inside this container.
+    extra_hosts:
+      - "${SITE_NAME:-uhis.localhost}:127.0.0.1"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_started
+      redis-queue:
+        condition: service_started
+      redis-socketio:
+        condition: service_started
+    networks:
+      - leapwell-net
+
+  db:
+    image: mariadb:10.6
+    restart: unless-stopped
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --skip-character-set-client-handshake
+      --skip-innodb-read-only-compressed
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in env/frappe/.env (copy .env.example)}
+    volumes:
+      - ./development/db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - leapwell-net
+
+  redis-cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - leapwell-net
+
+  redis-queue:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - leapwell-net
+
+  redis-socketio:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - leapwell-net
+
+  proxy:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./nginx/frappe.conf.template:/etc/nginx/templates/default.conf.template:ro
+    environment:
+      - SITE_NAME=${SITE_NAME:-uhis.localhost}
+      - NGINX_ENVSUBST_FILTER=SITE_NAME
+    depends_on:
+      - backend
+    networks:
+      - leapwell-net
+
+networks:
+  leapwell-net:
+    driver: bridge
+
+# Data layout (gitignored, under ./development/):
+#   workspace -> frappe-bench lives here; editable on the host
+#   db        -> MariaDB data
+#
+# macOS needs a case-sensitive volume for MariaDB: frappe_setup.sh creates and attaches an APFS sparse image
+# (development/db.sparseimage) mounted at development/db.

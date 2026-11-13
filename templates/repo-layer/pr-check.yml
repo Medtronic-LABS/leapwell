@@ -1,0 +1,28 @@
+# Managed by leapwell (scripts/sync/sync_repos.py). Do not edit here; change it in leapwell and re-sync.
+name: LW PR check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lw-pr-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lw-pr-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: {{org}}/{{tracker}}
+          ref: {{leapwell_ref}}
+          path: .leapwell
+          persist-credentials: false
+
+      # The script reads only the event payload; PR title/body are never interpolated into the shell.
+      - name: Check issue link, branch name and sensitive data
+        run: python3 .leapwell/scripts/sdlc/check_pr.py --event "$GITHUB_EVENT_PATH"

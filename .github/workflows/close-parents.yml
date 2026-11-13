@@ -1,0 +1,30 @@
+name: Close parents
+
+# Closes routed leapwell items whose sub-issues are all closed. GitHub does not do this
+# natively, and events from code repos cannot trigger workflows here, so it polls hourly.
+# Scheduled workflows are disabled after 60 days without repo activity; run it manually to re-arm.
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: close-parents
+  cancel-in-progress: false
+
+jobs:
+  close-parents:
+    runs-on: ubuntu-latest
+    env:
+      # The token must read issues in every code repo (one is private); falls back to the
+      # repo token, in which case unreadable sub-issues block the close (fail safe).
+      GH_TOKEN: ${{ secrets.LEAPWELL_BOT_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Close routed items whose sub-issues are all closed
+        run: python3 scripts/sdlc/close_parents.py --apply

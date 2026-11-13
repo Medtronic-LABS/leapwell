@@ -1,0 +1,7 @@
+#!/bin/sh
+# Commit subject must reference an issue (#N) or use a Conventional Commit type;
+# then chain to the repo's own commit-msg hook. Activated by scripts/workspace/setup.sh.
+set -e
+. "$(dirname "$0")/lib.sh"
+python3 "$LW_ROOT/scripts/sdlc/commit_msg.py" "$1"
+chain_repo_hook commit-msg "$@"
