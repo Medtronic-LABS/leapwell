@@ -2,7 +2,7 @@
 
 `Medtronic-LABS/leapwell` is the home of the LeapWell product team (Apon Sushashthya community health app,
 AI Scribe, micro-coaching, Frappe backend, teleconsult integration): requirements, tickets, mockups, and the
-shared developer workspace and AI-assisted SDLC for seven code repos. The repo is **public**.
+shared developer workspace and AI-assisted SDLC for eight code repos. The repo is **public**.
 
 **Start Claude from the leapwell root.** Skills, agents, hooks and settings in `.claude/` only apply there, and
 every path below is relative to it. Run `/lw-setup` once to clone the code repos.
@@ -21,6 +21,7 @@ clones each repo to `repos/<name>` (gitignored, but `.ignore` keeps Grep/Glob se
 | `mobile` | `repos/uhis_lf_mobile` | Mobile app | Flutter |
 | `core` | `repos/frappe_spice_next_core` | Frappe apps | Frappe (Python) |
 | `shukhee` | `repos/leapwell_shukhee_integration` | Frappe apps | Frappe (Python) |
+| `next-ai` | `repos/spice_next_ai` | Frappe apps | Frappe (Python) |
 | `ai` | `repos/leapfrog-ai-service` | AI Scribe | Python FastAPI |
 | `coaching` | `repos/spice-coaching` | Micro-coaching | Python |
 | `coaching-android` | `repos/spice-coaching-android` | Micro-coaching | Kotlin |
@@ -47,7 +48,7 @@ Process and hub:
 
 | Skill | Purpose |
 |---|---|
-| `lw-setup` | Clone/fetch the seven repos into `repos/`, point hooks at `.githooks`, run the tool doctor |
+| `lw-setup` | Clone/fetch the eight repos into `repos/`, point hooks at `.githooks`, run the tool doctor |
 | `lw-ticket` | File a bug, feature, task or release in leapwell through an interview (privacy scrub, preview, create on "yes") |
 | `lw-promote` | Promote an agreed Discussion to a leapwell feature issue |
 | `lw-route` | Create code-repo sub-issues for a leapwell item and link them |

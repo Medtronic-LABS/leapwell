@@ -48,6 +48,9 @@
 - name: area:shukhee
   color: "1D76DB"
   description: "Teleconsult integration (leapwell_shukhee_integration)"
+- name: area:next-ai
+  color: "1D76DB"
+  description: "Frappe AI app: NABA, Assistant, Briefing, card scan (spice_next_ai)"
 - name: area:ai
   color: "1D76DB"
   description: "AI Scribe service (leapfrog-ai-service)"

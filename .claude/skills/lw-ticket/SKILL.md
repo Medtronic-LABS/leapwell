@@ -72,6 +72,7 @@ In Claude Code inside the leapwell checkout, also run the repo's checker on the 
 | `area:mobile` | Apon Sushashthya Android app (uhis_lf_mobile) |
 | `area:core` | Frappe core backend (frappe_spice_next_core) |
 | `area:shukhee` | Teleconsult integration (leapwell_shukhee_integration) |
+| `area:next-ai` | Frappe AI app: NABA, Assistant, Briefing, card scan (spice_next_ai) |
 | `area:ai` | AI Scribe / visit briefing service (leapfrog-ai-service) |
 | `area:coaching` | Micro-coaching backend + SDK (spice-coaching) |
 | `area:coaching-android` | Micro-coaching Android SDK/app (spice-coaching-android) |

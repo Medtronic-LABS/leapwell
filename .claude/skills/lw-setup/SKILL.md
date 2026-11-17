@@ -1,6 +1,6 @@
 ---
 name: lw-setup
-description: Set up or refresh the LeapWell developer workspace - clone or fetch the seven code repos from repos.json into repos/, point their git hooks at leapwell's .githooks, and run the tool doctor. Safe to re-run.
+description: Set up or refresh the LeapWell developer workspace - clone or fetch the eight code repos from repos.json into repos/, point their git hooks at leapwell's .githooks, and run the tool doctor. Safe to re-run.
 argument-hint: "[--only key,key] [--ssh] [--no-clone] [--strict]"
 disable-model-invocation: true
 allowed-tools: Bash(bash scripts/workspace/setup.sh*), Bash(python3 -m scripts.workspace.doctor*), Bash(python3 -m scripts.sdlc.repos*), Bash(gh auth status*), Read

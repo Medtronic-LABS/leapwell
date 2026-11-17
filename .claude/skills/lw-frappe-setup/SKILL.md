@@ -1,6 +1,6 @@
 ---
 name: lw-frappe-setup
-description: First-time (or repair) setup of the local Frappe bench in env/frappe - Docker containers, bench init, and the frappe_spice_next_core and leapwell_shukhee_integration apps from the workspace clones, site, migrate, dev server. Idempotent.
+description: First-time (or repair) setup of the local Frappe bench in env/frappe - Docker containers, bench init, and the frappe_spice_next_core, leapwell_shukhee_integration and spice_next_ai apps from the workspace clones, site, migrate, dev server. Idempotent.
 disable-model-invocation: true
 ---
 
@@ -10,16 +10,16 @@ Run from the leapwell root. Details: `env/frappe/README.md`. The Frappe repos' `
 
 1. **Preconditions** (stop with the fix if any fails):
    - Docker Desktop running (`docker info`).
-   - `repos/frappe_spice_next_core` and `repos/leapwell_shukhee_integration` exist -> else `/lw-setup --only core,shukhee`.
+   - `repos/frappe_spice_next_core`, `repos/leapwell_shukhee_integration` and `repos/spice_next_ai` exist -> else `/lw-setup --only core,shukhee,next-ai`.
    - `env/frappe/.env` exists -> else tell the user: `cp env/frappe/.env.example env/frappe/.env` and change the passwords. The script refuses to run without it. Never print `.env` or put its values into commands or reports.
 
 2. **Run** `bash env/frappe/frappe_setup.sh` (about 10-15 minutes the first time; safe to re-run). It:
    1. creates/attaches the case-sensitive APFS sparse image for MariaDB on macOS (under `env/frappe/development/`, gitignored),
    2. builds the backend image and starts MariaDB, three Redis, nginx and the backend,
    3. runs `bench init` for the `FRAPPE_BRANCH` in `.env`,
-   4. links the two workspace clones into `apps/`, `pip install -e` each,
+   4. links the three workspace clones into `apps/`, `pip install -e` each,
    5. fetches `frappe_theme` (needed by `spice_next_core`),
-   6. creates the site named in `.env`, installs the three apps, enables developer mode, runs `migrate`,
+   6. creates the site named in `.env`, installs the four apps, enables developer mode, runs `migrate`,
    7. starts the bench dev server, socket.io and a background worker.
    Show the script output verbatim on failure; do not retry blindly. A failed `bench init` leaves a partial `env/frappe/development/workspace/frappe-bench`; ask before deleting anything under `development/`.
 

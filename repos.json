@@ -50,6 +50,21 @@
       }
     },
     {
+      "key": "next-ai",
+      "name": "spice_next_ai",
+      "area": "Frappe apps",
+      "stack": "Frappe (Python)",
+      "lint_rules": [{"files": ["*.py"], "run": "ruff check"}],
+      "integration_branch": "main",
+      "protected_branches": ["main"],
+      "notes": "Frappe app spice_next_ai (NABA, Assistant, Visit Briefing, card scan); needs the frappe env (env/frappe); site from env/frappe/.env",
+      "verify": {
+        "test": "bench --site {site} run-tests --app spice_next_ai && env/bin/python -m pytest -q apps/spice_next_ai/tests",
+        "lint": "ruff check .",
+        "build": "bench build --app spice_next_ai"
+      }
+    },
+    {
       "key": "ai",
       "name": "leapfrog-ai-service",
       "area": "AI Scribe",

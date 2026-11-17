@@ -22,6 +22,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && npm install -g yarn \
     && rm -rf /var/lib/apt/lists/*
 
+# Install bench system-wide: docker-compose.yml bind-mounts development/workspace over /home/frappe, which would
+# hide a `pip install --user` under /home/frappe/.local.
+RUN pip install --no-cache-dir frappe-bench
+
 RUN groupadd -g 1000 frappe \
     && useradd -m -u 1000 -g 1000 -s /bin/bash frappe \
     && usermod -aG sudo frappe \
@@ -30,7 +34,5 @@ RUN groupadd -g 1000 frappe \
 USER frappe
 WORKDIR /home/frappe
 ENV PATH="/home/frappe/.local/bin:${PATH}"
-
-RUN pip install --user --no-cache-dir frappe-bench
 
 CMD ["sleep", "infinity"]

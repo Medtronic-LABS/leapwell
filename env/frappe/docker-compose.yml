@@ -15,6 +15,7 @@ services:
       # frappe-bench/apps. frappe_setup.sh links them into frappe-bench/apps/.
       - ../../repos/frappe_spice_next_core:/workspace-apps/spice_next_core
       - ../../repos/leapwell_shukhee_integration:/workspace-apps/shukhee_integration
+      - ../../repos/spice_next_ai:/workspace-apps/spice_next_ai
     environment:
       - SHELL=/bin/bash
     # socket.io looks the user up at the site's own URL (nginx sets it as the Origin): the site name must reach the

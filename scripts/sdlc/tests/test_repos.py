@@ -10,11 +10,12 @@ from unittest import mock
 from scripts.sdlc import repos
 from scripts.sdlc.patterns import TRACKER_SLUG
 
-EXPECTED_KEYS = ["mobile", "core", "shukhee", "ai", "coaching", "coaching-android", "coaching-dashboard"]
+EXPECTED_KEYS = ["mobile", "core", "shukhee", "next-ai", "ai", "coaching", "coaching-android", "coaching-dashboard"]
 INTEGRATION = {
     "mobile": "develop",
     "core": "main",
     "shukhee": "main",
+    "next-ai": "main",
     "ai": "develop",
     "coaching": "development",
     "coaching-android": "development",
@@ -46,12 +47,12 @@ class TestRealManifest(unittest.TestCase):
             os.environ.pop(repos.ENV_OVERRIDE, None)
             self.manifest = repos.load()
 
-    def test_seven_repos_in_order(self):
+    def test_eight_repos_in_order(self):
         self.assertEqual([r.key for r in self.manifest.repos], EXPECTED_KEYS)
 
     def test_unique_keys_and_names(self):
-        self.assertEqual(len({r.key for r in self.manifest.repos}), 7)
-        self.assertEqual(len({r.name for r in self.manifest.repos}), 7)
+        self.assertEqual(len({r.key for r in self.manifest.repos}), 8)
+        self.assertEqual(len({r.name for r in self.manifest.repos}), 8)
 
     def test_integration_branches(self):
         self.assertEqual({r.key: r.integration_branch for r in self.manifest.repos}, INTEGRATION)

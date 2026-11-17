@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Local Frappe bench for the LeapWell Frappe apps (frappe_spice_next_core, leapwell_shukhee_integration).
+# Local Frappe bench for the LeapWell Frappe apps (frappe_spice_next_core, leapwell_shukhee_integration,
+# spice_next_ai).
 # The app source is the workspace clone under ../../repos, bind-mounted into the backend container.
 #
 # Usage: bash frappe_setup.sh [--start | --stop | --restart | --status | --help]
@@ -27,7 +28,7 @@ Usage: bash frappe_setup.sh [--start | --stop | --restart | --status | --help]
   --help      this text
 
 Needs a .env next to this script (cp .env.example .env) and the workspace clones
-repos/frappe_spice_next_core and repos/leapwell_shukhee_integration (run /lw-setup).
+repos/frappe_spice_next_core, repos/leapwell_shukhee_integration and repos/spice_next_ai (run /lw-setup).
 USAGE
 }
 
@@ -36,7 +37,8 @@ cd "$SCRIPT_DIR"
 
 BENCH_HOME="/home/frappe/frappe-bench"
 # <bench app name>:<workspace clone under ../../repos>, in install order (shukhee requires spice_next_core).
-WORKSPACE_APPS=("spice_next_core:frappe_spice_next_core" "shukhee_integration:leapwell_shukhee_integration")
+WORKSPACE_APPS=("spice_next_core:frappe_spice_next_core" "shukhee_integration:leapwell_shukhee_integration"
+  "spice_next_ai:spice_next_ai")
 
 DO_START=false; DO_STOP=false; DO_RESTART=false; DO_STATUS=false
 
@@ -71,7 +73,7 @@ check_workspace_apps() {
   local entry clone
   for entry in "${WORKSPACE_APPS[@]}"; do
     clone="${entry#*:}"
-    [[ -d "../../repos/$clone" ]] || error "repos/$clone is missing. Run /lw-setup (or: bash scripts/workspace/setup.sh --only core,shukhee) from the leapwell root."
+    [[ -d "../../repos/$clone" ]] || error "repos/$clone is missing. Run /lw-setup (or: bash scripts/workspace/setup.sh --only core,shukhee,next-ai) from the leapwell root."
   done
 }
 
@@ -200,12 +202,13 @@ do_stop() {
 }
 
 ensure_build_deps() {
+  # The backend image (docker/backend-v16) ships Python, Node, yarn, gcc, git and bench; this only verifies them.
   docker compose exec -T backend bash -c "
+    set -e
     git config --global --add safe.directory '*'
-    dpkg -s python3-dev gcc git nodejs &>/dev/null && command -v yarn &>/dev/null && exit 0
-    sudo apt-get update -qq
-    sudo apt-get install -y python3-dev python3-pip gcc git nodejs npm -qq
-    sudo npm install -g yarn --loglevel=error
+    for tool in gcc git node yarn bench; do
+      command -v \"\$tool\" >/dev/null || { echo \"missing in backend image: \$tool - rebuild: docker compose build backend\" >&2; exit 1; }
+    done
   "
 }
 
@@ -223,8 +226,15 @@ link_workspace_app() {
     bench_exec "./env/bin/python -m pip install -e apps/$app || uv pip install --python ./env/bin/python -e apps/$app"
     success "$app installed."
   fi
-  bench_exec "grep -qxF '$app' sites/apps.txt || echo '$app' >> sites/apps.txt"
-  bench_exec "grep -qxF '$app' apps.txt 2>/dev/null || echo '$app' >> apps.txt"
+  register_app sites/apps.txt "$app"
+  register_app apps.txt "$app"
+}
+
+# Add an app line to a bench apps.txt once. bench rewrites these files without a trailing newline, so add one
+# first (sed '$a\') or the appended name joins the last line.
+register_app() {
+  local file="$1" app="$2"
+  bench_exec "touch $file && sed -i -e '\$a\\' $file && { grep -qxF '$app' $file || echo '$app' >> $file; }"
 }
 
 install_site_app() {
@@ -303,11 +313,12 @@ CONF
   else
     step "Fetching frappe_theme (Suvaidyam, branch: development) - required by spice_next_core"
     bench_exec "bench get-app frappe_theme --branch development https://github.com/Suvaidyam/frappe_theme.git"
-    bench_exec "grep -qxF 'frappe_theme' apps.txt || echo 'frappe_theme' >> apps.txt"
+    register_app apps.txt frappe_theme
     success "frappe_theme fetched."
   fi
 
   link_workspace_app shukhee_integration
+  link_workspace_app spice_next_ai
 
   if site_exists; then
     success "Site '$SITE_NAME' already exists - skipping."
@@ -324,6 +335,7 @@ CONF
   install_site_app frappe_theme
   install_site_app spice_next_core
   install_site_app shukhee_integration
+  install_site_app spice_next_ai
 
   step "Configuring site"
   bench_exec "bench --site '$SITE_NAME' set-config developer_mode 1"

@@ -8,6 +8,7 @@ bench tree. It is the workspace clone:
 |---|---|---|
 | `spice_next_core` | `repos/frappe_spice_next_core` | `/workspace-apps/spice_next_core` |
 | `shukhee_integration` | `repos/leapwell_shukhee_integration` | `/workspace-apps/shukhee_integration` |
+| `spice_next_ai` | `repos/spice_next_ai` | `/workspace-apps/spice_next_ai` |
 
 The setup script links each mount into `frappe-bench/apps/`, runs `pip install -e` and `install-app`, so edits
 in `repos/<name>` show up in the bench immediately. (The mounts sit outside the bench tree because `bench init`

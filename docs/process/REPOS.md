@@ -1,14 +1,15 @@
 # Repos
 
-The seven LeapWell code repos, all under the `Medtronic-LABS` GitHub org. `repos.json` is the single source of
+The eight LeapWell code repos, all under the `Medtronic-LABS` GitHub org. `repos.json` is the single source of
 these facts (a test fails if this table drifts from it); correct integration branches there. `/lw-setup` clones
-each into `repos/<name>` in the workspace. `leapfrog-ai-service` is private; the others are public.
+each into `repos/<name>` in the workspace. `leapfrog-ai-service` and `spice_next_ai` are private; the others are public.
 
 | Key | Repo | Area | Stack | Integration branch | Verify (test / lint / build) | Notes |
 |---|---|---|---|---|---|---|
 | `mobile` | [uhis_lf_mobile](https://github.com/Medtronic-LABS/uhis_lf_mobile) | Mobile app | Flutter | `develop` | `flutter test` / `flutter analyze` / `flutter build apk --debug` | |
 | `core` | [frappe_spice_next_core](https://github.com/Medtronic-LABS/frappe_spice_next_core) | Frappe apps | Frappe (Python) | `main` | `bench --site {site} run-tests --app spice_next_core` / `ruff check spice_next_core/` / `bench build --app spice_next_core` | needs the frappe env (`env/frappe`); site from `env/frappe/.env` |
 | `shukhee` | [leapwell_shukhee_integration](https://github.com/Medtronic-LABS/leapwell_shukhee_integration) | Frappe apps | Frappe (Python) | `main` | `bench --site {site} run-tests --app shukhee_integration` / `ruff check .` / `bench build --app shukhee_integration` | needs the frappe env (`env/frappe`); site from `env/frappe/.env` |
+| `next-ai` | [spice_next_ai](https://github.com/Medtronic-LABS/spice_next_ai) | Frappe apps | Frappe (Python) | `main` | `bench --site {site} run-tests --app spice_next_ai && env/bin/python -m pytest -q apps/spice_next_ai/tests` / `ruff check .` / `bench build --app spice_next_ai` | Frappe app `spice_next_ai` (NABA, Assistant, Visit Briefing, card scan); needs the frappe env (`env/frappe`); site from `env/frappe/.env` |
 | `ai` | [leapfrog-ai-service](https://github.com/Medtronic-LABS/leapfrog-ai-service) | AI Scribe | Python FastAPI | `develop` | `pytest -q` / `ruff check .` / none | no build step |
 | `coaching` | [spice-coaching](https://github.com/Medtronic-LABS/spice-coaching) | Micro-coaching | Python | `development` | `python -m pytest` / `ruff check .` / none | no build step |
 | `coaching-android` | [spice-coaching-android](https://github.com/Medtronic-LABS/spice-coaching-android) | Micro-coaching | Kotlin | `development` | `./gradlew :sdk-android:test` / none / `./gradlew :sdk-android:assembleDebug` | lint not documented - check README |
