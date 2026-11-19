@@ -1,6 +1,6 @@
 # LeapWell SDLC
 
-How work moves from an idea to a release across the seven LeapWell code repos. Short on purpose:
+How work moves from an idea to a release across the eleven LeapWell code repos. Short on purpose:
 ceremony scales with the size of the change. This file is the single home of the process; skills,
 agents, CI and the other docs point here instead of repeating it.
 Design record: [`docs/superpowers/specs/2026-11-04-leapwell-hub-design.md`](../superpowers/specs/2026-11-04-leapwell-hub-design.md).
@@ -211,7 +211,7 @@ Process skills you run:
 
 | Skill | When |
 |---|---|
-| `/lw-setup` | Clone or refresh the seven repos under `repos/`, wire hooks, check tools |
+| `/lw-setup` | Clone or refresh the eleven repos under `repos/`, wire hooks, check tools |
 | `/lw-ticket` | File a bug, feature, task or release (also works in Claude chat with the org skill) |
 | `/lw-promote <discussion#>` | PM: turn an agreed Discussion into a leapwell feature item |
 | `/lw-route <N>` | Developer: create code-repo sub-issues for a leapwell item |

@@ -1,6 +1,6 @@
 # Repos and areas
 
-LeapWell code lives in seven repositories under the Medtronic-LABS org. The authoritative table (integration
+LeapWell code lives in eleven repositories under the Medtronic-LABS org. The authoritative table (integration
 branches, verify commands) is [REPOS.md](https://github.com/Medtronic-LABS/leapwell/blob/main/docs/process/REPOS.md).
 
 | Area | Repo | Stack | What it holds |
@@ -12,6 +12,10 @@ branches, verify commands) is [REPOS.md](https://github.com/Medtronic-LABS/leapw
 | Micro-coaching | [spice-coaching](https://github.com/Medtronic-LABS/spice-coaching) | Python | Platform API, worker, AI runtime, shared contracts |
 | Micro-coaching | [spice-coaching-android](https://github.com/Medtronic-LABS/spice-coaching-android) | Kotlin | Android SDK embedded in the clinical app, optional offline speech-to-text, sample app |
 | Micro-coaching | [spice-coaching-dashboard-ui](https://github.com/Medtronic-LABS/spice-coaching-dashboard-ui) | TypeScript / Vite | Admin dashboard: modules, knowledge library, ingestion, analytics |
+| Card OCR | [frappe_card_studio](https://github.com/Medtronic-LABS/frappe_card_studio) | Frappe (Python) | Card Studio in Frappe Desk: card templates and grids, scans, labeling, training runs, card packs (private repo) |
+| Card OCR | [card-studio](https://github.com/Medtronic-LABS/card-studio) | Python | Stand-alone Card Studio, the trainer and the card-pack format |
+| Frappe apps | [frappe_leapwell_telemetry](https://github.com/Medtronic-LABS/frappe_leapwell_telemetry) | Frappe (Python) | Opt-in usage and quality telemetry for AI Scribe |
+| Frappe apps | [frappe_uhis](https://github.com/Medtronic-LABS/frappe_uhis) | Frappe (Python) | Umbrella app: branding, landing workspaces and the dock |
 
 ## Features to repos
 
@@ -28,5 +32,5 @@ branches, verify commands) is [REPOS.md](https://github.com/Medtronic-LABS/leapw
 ## Tickets and labels
 
 Everything is filed in leapwell. Each repo has an `area:<key>` label (`area:mobile`, `area:core`, `area:shukhee`,
-`area:ai`, `area:coaching`, `area:coaching-android`, `area:coaching-dashboard`). A developer routes a ticket
+`area:ai`, `area:coaching`, `area:coaching-android`, `area:coaching-dashboard`, `area:card-studio-frappe`, `area:card-studio`, `area:telemetry`, `area:uhis`). A developer routes a ticket
 into one sub-issue per affected repo.

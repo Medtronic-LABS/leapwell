@@ -8,7 +8,7 @@ This Wiki describes the project and its features. How we work is in the reposito
 ## Start here
 
 - [Project overview](Project-Overview): what LeapWell is, who uses it, how the pieces fit
-- [Repos and areas](Repos-and-Areas): the seven code repos and the product areas they serve
+- [Repos and areas](Repos-and-Areas): the eleven code repos and the product areas they serve
 - [Glossary](Glossary): programme and clinical terms used across the project
 
 ## Features

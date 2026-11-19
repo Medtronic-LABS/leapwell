@@ -12,4 +12,4 @@ Run from the leapwell root. Needs a previous `/lw-frappe-setup` (the `env/frappe
 - Normal: `bash env/frappe/frappe_setup.sh --start`
 - If `$ARGUMENTS` contains `--restart`: `bash env/frappe/frappe_setup.sh --restart`
 
-The script attaches the APFS sparse image on macOS, brings the containers up, waits for MariaDB, restarts the bench dev server, socket.io and worker, and waits for `http://localhost:8081`. Show failures verbatim. Then run `/lw-frappe-status` and report the URL and that the credentials and site name are in `env/frappe/.env`.
+The script brings the containers up, waits for PostgreSQL, restarts the bench dev server, socket.io and worker, and waits for `http://localhost:8082`. Show failures verbatim. Then run `/lw-frappe-status` and report the URL and that the credentials and site name are in `env/frappe/.env`.

@@ -2,7 +2,7 @@
 
 `Medtronic-LABS/leapwell` is the home of the LeapWell product team (Apon Sushashthya community health app,
 AI Scribe, micro-coaching, Frappe backend, teleconsult integration): requirements, tickets, mockups, and the
-shared developer workspace and AI-assisted SDLC for seven code repos. The repo is **public**.
+shared developer workspace and AI-assisted SDLC for eleven code repos. The repo is **public**.
 
 **Start Claude from the leapwell root.** Skills, agents, hooks and settings in `.claude/` only apply there, and
 every path below is relative to it. Run `/lw-setup` once to clone the code repos.
@@ -25,6 +25,10 @@ clones each repo to `repos/<name>` (gitignored, but `.ignore` keeps Grep/Glob se
 | `coaching` | `repos/spice-coaching` | Micro-coaching | Python |
 | `coaching-android` | `repos/spice-coaching-android` | Micro-coaching | Kotlin |
 | `coaching-dashboard` | `repos/spice-coaching-dashboard-ui` | Micro-coaching | TypeScript/Vite |
+| `card-studio-frappe` | `repos/frappe_card_studio` | Card OCR | Frappe (Python) |
+| `card-studio` | `repos/card-studio` | Card OCR | Python |
+| `telemetry` | `repos/frappe_leapwell_telemetry` | Frappe apps | Frappe (Python) |
+| `uhis` | `repos/frappe_uhis` | Frappe apps | Frappe (Python) |
 
 Other folders: `docs/process/` (process), `wiki/` (seed for the GitHub Wiki), `mockups/<feature-slug>/` (design
 mockups, fake data only), `env/frappe/` (local Frappe bench built from the workspace clones), `scripts/`
@@ -47,7 +51,7 @@ Process and hub:
 
 | Skill | Purpose |
 |---|---|
-| `lw-setup` | Clone/fetch the seven repos into `repos/`, point hooks at `.githooks`, run the tool doctor |
+| `lw-setup` | Clone/fetch the eleven repos into `repos/`, point hooks at `.githooks`, run the tool doctor |
 | `lw-ticket` | File a bug, feature, task or release in leapwell through an interview (privacy scrub, preview, create on "yes") |
 | `lw-promote` | Promote an agreed Discussion to a leapwell feature issue |
 | `lw-route` | Create code-repo sub-issues for a leapwell item and link them |

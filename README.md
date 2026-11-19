@@ -29,7 +29,7 @@ The first time, Claude asks whether you trust this folder - accept it. Until you
 pre-approved in `.claude/settings.json` are ignored and every `git status` asks for permission (the guard hook
 runs either way).
 
-Then, inside Claude, run `/lw-setup`. It clones the seven code repos listed in
+Then, inside Claude, run `/lw-setup`. It clones the eleven code repos listed in
 [REPOS.md](docs/process/REPOS.md) into `repos/`, points their git hooks at leapwell's, and reports which tools
 (git, gh, python3 3.11+, flutter, docker, node, java) are missing for which area. It is safe to re-run.
 
@@ -46,7 +46,7 @@ Run the repo's own checks with `python3 -m unittest discover -s scripts -t .`.
 - [docs/process/TICKETS.md](docs/process/TICKETS.md): one-page filing guide for PM and QA
 - [docs/process/REQUIREMENTS.md](docs/process/REQUIREMENTS.md): Discussions, promotion, routing, Wiki and mockup rules
 - [docs/process/ADMIN_SETUP.md](docs/process/ADMIN_SETUP.md): owner rollout, secrets, open decisions
-- [docs/process/REPOS.md](docs/process/REPOS.md): the seven repos, branches and verify commands
+- [docs/process/REPOS.md](docs/process/REPOS.md): the eleven repos, branches and verify commands
 - [docs/superpowers/specs/2026-11-04-leapwell-hub-design.md](docs/superpowers/specs/2026-11-04-leapwell-hub-design.md): design record
 
 ## Rollout status

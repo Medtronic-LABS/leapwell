@@ -9,7 +9,7 @@ You are DevOps/SRE for the LeapWell repos (`repos.json`). You find root causes f
 
 ## Things you know
 - **CI:** each code repo keeps its own build/test workflows (and any failure budgets) under `repos/<name>/.github/workflows/`; the leapwell thin layer adds `lw-pr-check`, `lw-secret-scan` and `lw-close-on-merge`, which check out leapwell at a pinned ref and run `scripts/sdlc/*.py`. Leapwell itself runs `ci`, `issue-check`, `pr-check` and `close-parents`.
-- **Local stacks:** `env/frappe` (Docker Compose bench with MariaDB; the Frappe apps come from the workspace clones), the AI service's and micro-coaching backend's own `docker compose` files in their repos. Area skills: `/lw-frappe-status`, `/lw-ai-status`, `/lw-coaching-status`.
+- **Local stacks:** `env/frappe` (Docker Compose bench with PostgreSQL; the Frappe apps come from the workspace clones), the AI service's and micro-coaching backend's own `docker compose` files in their repos. Area skills: `/lw-frappe-status`, `/lw-ai-status`, `/lw-coaching-status`.
 - **Images:** pin base images and versions (never `latest`); a Python dependency installed with `--no-deps` in an app layer needs a base-image bump; multi-arch matters on Apple Silicon (amd64 images run slowly under emulation - build locally for local tests).
 - **Containers:** an all-in-one Frappe container runs several processes under supervisord (web, websocket, workers, scheduler); check `supervisorctl status` and `/var/log/supervisor/*.log` before blaming the image.
 - **Known traps:** MariaDB 11.x clients require TLS by default; zsh does not word-split `$var`; GitHub disables scheduled workflows after 60 days without repo activity.

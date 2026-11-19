@@ -76,6 +76,10 @@ In Claude Code inside the leapwell checkout, also run the repo's checker on the 
 | `area:coaching` | Micro-coaching backend + SDK (spice-coaching) |
 | `area:coaching-android` | Micro-coaching Android SDK/app (spice-coaching-android) |
 | `area:coaching-dashboard` | Micro-coaching dashboard (spice-coaching-dashboard-ui) |
+| `area:card-studio-frappe` | Card Studio in Frappe: handwritten card templates, labeling, training (frappe_card_studio) |
+| `area:card-studio` | Card Studio trainer and card-pack format (card-studio) |
+| `area:telemetry` | AI Scribe usage telemetry in Frappe (frappe_leapwell_telemetry) |
+| `area:uhis` | UHIS umbrella Frappe app: branding and workspaces (frappe_uhis) |
 
 ### 6. Preview and confirm
 Show the complete issue exactly as it will be filed:

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Local Frappe bench for the LeapWell Frappe apps (frappe_spice_next_core, leapwell_shukhee_integration).
+# Local Frappe bench for the LeapWell Frappe apps (frappe_spice_next_core, leapwell_shukhee_integration,
+# frappe_leapwell_telemetry, frappe_uhis, frappe_card_studio).
 # The app source is the workspace clone under ../../repos, bind-mounted into the backend container.
 #
 # Usage: bash frappe_setup.sh [--start | --stop | --restart | --status | --help]
@@ -21,13 +22,13 @@ Usage: bash frappe_setup.sh [--start | --stop | --restart | --status | --help]
 
   (no flag)   full idempotent setup: containers, bench init, apps, site, migrate, dev server
   --start     bring the containers up and start the bench dev server
-  --stop      docker compose down (data under development/ is kept)
+  --stop      docker compose down (the bench under development/ and the database volume are kept)
   --restart   --stop, then --start
-  --status    container states, HTTP check, MariaDB ping, recent backend logs
+  --status    container states, HTTP check, PostgreSQL check, recent backend logs
   --help      this text
 
-Needs a .env next to this script (cp .env.example .env) and the workspace clones
-repos/frappe_spice_next_core and repos/leapwell_shukhee_integration (run /lw-setup).
+Needs a .env next to this script (cp .env.example .env) and the workspace clones of the five Frappe
+apps under repos/ (run /lw-setup).
 USAGE
 }
 
@@ -35,8 +36,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 BENCH_HOME="/home/frappe/frappe-bench"
-# <bench app name>:<workspace clone under ../../repos>, in install order (shukhee requires spice_next_core).
-WORKSPACE_APPS=("spice_next_core:frappe_spice_next_core" "shukhee_integration:leapwell_shukhee_integration")
+# <bench app name>:<workspace clone under ../../repos>, in install order: shukhee and telemetry require
+# spice_next_core, uhis requires all three.
+WORKSPACE_APPS=(
+  "spice_next_core:frappe_spice_next_core"
+  "shukhee_integration:leapwell_shukhee_integration"
+  "leapwell_telemetry:frappe_leapwell_telemetry"
+  "uhis:frappe_uhis"
+  "card_studio:frappe_card_studio"
+)
 
 DO_START=false; DO_STOP=false; DO_RESTART=false; DO_STATUS=false
 
@@ -64,47 +72,36 @@ load_env() {
   : "${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is not set in env/frappe/.env}"
   : "${ADMIN_PASSWORD:?ADMIN_PASSWORD is not set in env/frappe/.env}"
   : "${SITE_NAME:?SITE_NAME is not set in env/frappe/.env}"
-  FRAPPE_BRANCH="${FRAPPE_BRANCH:-version-16}"
+  FRAPPE_BRANCH="${FRAPPE_BRANCH:-v16.60.2}"
+  # Host port of the site; the same default is in docker-compose.yml.
+  export FRAPPE_HTTP_PORT="${FRAPPE_HTTP_PORT:-8082}"
+  SITE_URL="http://localhost:$FRAPPE_HTTP_PORT"
 }
 
 check_workspace_apps() {
   local entry clone
   for entry in "${WORKSPACE_APPS[@]}"; do
     clone="${entry#*:}"
-    [[ -d "../../repos/$clone" ]] || error "repos/$clone is missing. Run /lw-setup (or: bash scripts/workspace/setup.sh --only core,shukhee) from the leapwell root."
+    [[ -d "../../repos/$clone" ]] || error "repos/$clone is missing. Run /lw-setup (or: bash scripts/workspace/setup.sh --only core,shukhee,telemetry,uhis,card-studio-frappe) from the leapwell root."
   done
 }
 
-prepare_db_volume() {
+prepare_workspace() {
   mkdir -p development/workspace
-  if [[ "$(uname)" == "Darwin" ]]; then
-    if [[ ! -f development/db.sparseimage ]]; then
-      info "Creating case-sensitive APFS sparse image for MariaDB (macOS requirement)..."
-      mkdir -p development/db
-      hdiutil create -size 4g -type SPARSE -fs "Case-sensitive APFS" \
-        -volname leapwell-frappe-db development/db
-      success "Sparse image created: development/db.sparseimage"
-    fi
-    if ! mount | grep -q "$(pwd)/development/db"; then
-      info "Attaching DB sparse image..."
-      hdiutil attach development/db.sparseimage -mountpoint development/db
-      success "DB volume mounted at development/db"
-    else
-      info "DB sparse image already mounted."
-    fi
-  else
-    mkdir -p development/db
-  fi
+}
+
+db_ready() {
+  docker compose exec -T db pg_isready -U postgres -q 2>/dev/null
 }
 
 wait_for_db() {
-  info "Waiting for MariaDB to be ready..."
+  info "Waiting for PostgreSQL to be ready..."
   local retries=20
-  until docker compose exec -T -e MYSQL_PWD="$DB_ROOT_PASSWORD" db mysqladmin ping -h localhost --silent 2>/dev/null; do
-    ((retries--)) || error "MariaDB did not become healthy in time."
+  until db_ready; do
+    ((retries--)) || error "PostgreSQL did not become healthy in time."
     sleep 3
   done
-  success "MariaDB is ready."
+  success "PostgreSQL is ready."
 }
 
 bench_init_done() {
@@ -126,13 +123,13 @@ bench_exec() {
 }
 
 wait_for_site() {
-  info "Waiting for site at http://localhost:8081 (Frappe takes ~30 s to warm up)..."
+  info "Waiting for site at $SITE_URL (Frappe takes ~30 s to warm up)..."
   local retries=40
-  until curl -sf -o /dev/null "http://localhost:8081"; do
+  until curl -sf -o /dev/null "$SITE_URL"; do
     ((retries--)) || { warn "Site did not respond - check: docker compose exec backend tail -30 /tmp/bench.log"; return; }
     sleep 5
   done
-  success "Site is up at http://localhost:8081"
+  success "Site is up at $SITE_URL"
 }
 
 start_bench_server() {
@@ -154,7 +151,7 @@ print_summary() {
   echo -e "${BOLD}${GREEN}------------------------------------------${NC}"
   echo -e "${BOLD}  LeapWell Frappe bench is running${NC}"
   echo -e "${BOLD}${GREEN}------------------------------------------${NC}"
-  echo -e "  URL      : http://localhost:8081"
+  echo -e "  URL      : $SITE_URL"
   echo -e "  User     : Administrator (password: ADMIN_PASSWORD in env/frappe/.env)"
   echo -e "  Site     : $SITE_NAME"
   echo ""
@@ -170,21 +167,21 @@ do_status() {
   docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || true
 
   echo ""
-  info "Checking http://localhost:8081 ..."
+  info "Checking $SITE_URL ..."
   local http_code
-  http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081 2>/dev/null || true)
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" "$SITE_URL" 2>/dev/null || true)
   http_code="${http_code:-000}"
   if [[ "$http_code" == "200" || "$http_code" == "302" || "$http_code" == "301" ]]; then
-    success "Web (8081): HTTP $http_code"
+    success "Web ($FRAPPE_HTTP_PORT): HTTP $http_code"
   else
-    warn "Web (8081): HTTP $http_code - site may still be starting"
+    warn "Web ($FRAPPE_HTTP_PORT): HTTP $http_code - site may still be starting"
   fi
 
-  info "Checking MariaDB ..."
-  if docker compose exec -T -e MYSQL_PWD="$DB_ROOT_PASSWORD" db mysqladmin ping -h localhost --silent 2>/dev/null; then
-    success "MariaDB: healthy"
+  info "Checking PostgreSQL ..."
+  if db_ready; then
+    success "PostgreSQL: healthy"
   else
-    warn "MariaDB: not responding"
+    warn "PostgreSQL: not responding"
   fi
 
   info "Recent backend logs:"
@@ -196,13 +193,14 @@ do_stop() {
   check_docker
   # compose interpolates .env; give it harmless defaults so a stop works even if .env was removed
   DB_ROOT_PASSWORD="${DB_ROOT_PASSWORD:-unused-for-stop}" docker compose down
-  success "All containers stopped (data under development/ is kept)."
+  success "All containers stopped (the bench under development/ and the database volume are kept)."
 }
 
 ensure_build_deps() {
   docker compose exec -T backend bash -c "
     git config --global --add safe.directory '*'
-    dpkg -s python3-dev gcc git nodejs &>/dev/null && command -v yarn &>/dev/null && exit 0
+    # The backend image already has these (its Python is built from source, so there is no python3-dev package).
+    command -v gcc git node yarn &>/dev/null && exit 0
     sudo apt-get update -qq
     sudo apt-get install -y python3-dev python3-pip gcc git nodejs npm -qq
     sudo npm install -g yarn --loglevel=error
@@ -223,8 +221,15 @@ link_workspace_app() {
     bench_exec "./env/bin/python -m pip install -e apps/$app || uv pip install --python ./env/bin/python -e apps/$app"
     success "$app installed."
   fi
-  bench_exec "grep -qxF '$app' sites/apps.txt || echo '$app' >> sites/apps.txt"
-  bench_exec "grep -qxF '$app' apps.txt 2>/dev/null || echo '$app' >> apps.txt"
+  register_app "$app" sites/apps.txt
+  register_app "$app" apps.txt
+}
+
+# Add an app to one of the bench's app lists. bench rewrites these files without a final newline, so end the
+# last line first; otherwise two names end up joined on one line.
+register_app() {
+  local app="$1" list="$2"
+  bench_exec "touch '$list'; grep -qxF '$app' '$list' && exit 0; [[ -s '$list' && -n \"\$(tail -c1 '$list')\" ]] && echo >> '$list'; echo '$app' >> '$list'"
 }
 
 install_site_app() {
@@ -241,7 +246,7 @@ install_site_app() {
 do_start() {
   step "Starting"
   check_docker; load_env; check_workspace_apps
-  prepare_db_volume
+  prepare_workspace
 
   info "Bringing containers up..."
   docker compose up -d
@@ -261,7 +266,7 @@ do_full_setup() {
   check_docker; load_env; check_workspace_apps
   [[ -f docker-compose.yml ]] || error "docker-compose.yml not found next to the script."
 
-  prepare_db_volume
+  prepare_workspace
 
   step "Starting containers (builds the backend image on first run)"
   docker compose up -d --build
@@ -282,7 +287,7 @@ do_full_setup() {
       cat > $BENCH_HOME/sites/common_site_config.json <<CONF
 {
   \"db_host\": \"db\",
-  \"db_port\": 3306,
+  \"db_port\": 5432,
   \"redis_cache\": \"redis://redis-cache:6379\",
   \"redis_queue\": \"redis://redis-queue:6379\",
   \"redis_socketio\": \"redis://redis-socketio:6379\",
@@ -303,31 +308,37 @@ CONF
   else
     step "Fetching frappe_theme (Suvaidyam, branch: development) - required by spice_next_core"
     bench_exec "bench get-app frappe_theme --branch development https://github.com/Suvaidyam/frappe_theme.git"
-    bench_exec "grep -qxF 'frappe_theme' apps.txt || echo 'frappe_theme' >> apps.txt"
+    register_app frappe_theme apps.txt
     success "frappe_theme fetched."
   fi
 
-  link_workspace_app shukhee_integration
+  local entry
+  for entry in "${WORKSPACE_APPS[@]:1}"; do
+    link_workspace_app "${entry%%:*}"
+  done
 
   if site_exists; then
     success "Site '$SITE_NAME' already exists - skipping."
   else
     step "Creating site: $SITE_NAME"
     bench_exec "bench new-site '$SITE_NAME' \
+      --db-type postgres \
       --db-host db \
+      --db-port 5432 \
+      --db-root-username postgres \
       --db-root-password '$DB_ROOT_PASSWORD' \
-      --admin-password '$ADMIN_PASSWORD' \
-      --no-mariadb-socket"
+      --admin-password '$ADMIN_PASSWORD'"
     success "Site created."
   fi
 
   install_site_app frappe_theme
-  install_site_app spice_next_core
-  install_site_app shukhee_integration
+  for entry in "${WORKSPACE_APPS[@]}"; do
+    install_site_app "${entry%%:*}"
+  done
 
   step "Configuring site"
   bench_exec "bench --site '$SITE_NAME' set-config developer_mode 1"
-  bench_exec "bench --site '$SITE_NAME' set-config host_name 'http://localhost:8081'"
+  bench_exec "bench --site '$SITE_NAME' set-config host_name '$SITE_URL'"
   bench_exec "bench --site '$SITE_NAME' clear-cache"
   success "Developer mode enabled."
 
