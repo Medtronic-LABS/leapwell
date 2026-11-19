@@ -17,6 +17,7 @@ body:
         - Frappe apps
         - AI Scribe
         - Micro-coaching
+        - Card OCR
         - Don't know
     validations:
       required: false

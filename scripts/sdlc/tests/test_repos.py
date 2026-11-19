@@ -10,7 +10,19 @@ from unittest import mock
 from scripts.sdlc import repos
 from scripts.sdlc.patterns import TRACKER_SLUG
 
-EXPECTED_KEYS = ["mobile", "core", "shukhee", "ai", "coaching", "coaching-android", "coaching-dashboard"]
+EXPECTED_KEYS = [
+    "mobile",
+    "core",
+    "shukhee",
+    "ai",
+    "coaching",
+    "coaching-android",
+    "coaching-dashboard",
+    "card-studio-frappe",
+    "card-studio",
+    "telemetry",
+    "uhis",
+]
 INTEGRATION = {
     "mobile": "develop",
     "core": "main",
@@ -19,6 +31,10 @@ INTEGRATION = {
     "coaching": "development",
     "coaching-android": "development",
     "coaching-dashboard": "develop",
+    "card-studio-frappe": "main",
+    "card-studio": "main",
+    "telemetry": "main",
+    "uhis": "main",
 }
 
 
@@ -46,12 +62,12 @@ class TestRealManifest(unittest.TestCase):
             os.environ.pop(repos.ENV_OVERRIDE, None)
             self.manifest = repos.load()
 
-    def test_seven_repos_in_order(self):
+    def test_repos_in_order(self):
         self.assertEqual([r.key for r in self.manifest.repos], EXPECTED_KEYS)
 
     def test_unique_keys_and_names(self):
-        self.assertEqual(len({r.key for r in self.manifest.repos}), 7)
-        self.assertEqual(len({r.name for r in self.manifest.repos}), 7)
+        self.assertEqual(len({r.key for r in self.manifest.repos}), len(EXPECTED_KEYS))
+        self.assertEqual(len({r.name for r in self.manifest.repos}), len(EXPECTED_KEYS))
 
     def test_integration_branches(self):
         self.assertEqual({r.key: r.integration_branch for r in self.manifest.repos}, INTEGRATION)
@@ -95,7 +111,8 @@ class TestRealManifest(unittest.TestCase):
         for key in ("core", "shukhee", "coaching"):
             self.assertEqual(runs[key], ["ruff check"], key)
         self.assertEqual(runs["ai"], ["ruff check --isolated"])
-        self.assertEqual(runs["coaching-android"], [])
+        for key in ("coaching-android", "card-studio-frappe", "card-studio", "telemetry"):
+            self.assertEqual(runs[key], [], key)
         self.assertEqual(runs["coaching-dashboard"], ["npx --no eslint", "npx --no prettier --check"])
         for key in EXPECTED_KEYS:
             self.assertFalse(any("--fix" in r or "--write" in r for r in runs[key]), key)

@@ -103,7 +103,7 @@ the connector's OAuth app. Test with one user (file a test ticket, check it, clo
 ## 7. Secrets and access
 
 - **`LEAPWELL_BOT_TOKEN`** (leapwell repo secret, used by `close-parents`): a fine-grained PAT or GitHub App token
-  with **Issues: read** on all seven code repos (one, `leapfrog-ai-service`, is private) and **Issues: write** on
+  with **Issues: read** on all eleven code repos (two, `leapfrog-ai-service` and `frappe_card_studio`, are private) and **Issues: write** on
   leapwell. Without it the workflow falls back to `GITHUB_TOKEN`, which cannot read the private repo, so a routed
   item with a sub-issue there is never auto-closed (fail safe).
 - Nothing else is needed as a secret. Never put env values, hash keys, tokens or passwords in the repo or in docs.

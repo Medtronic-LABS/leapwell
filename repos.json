@@ -91,6 +91,63 @@
       "integration_branch": "develop",
       "protected_branches": ["develop", "leapwell-main", "main"],
       "verify": {"test": "npm run test -- --run", "lint": "npm run lint", "build": "npm run build"}
+    },
+    {
+      "key": "card-studio-frappe",
+      "name": "frappe_card_studio",
+      "area": "Card OCR",
+      "stack": "Frappe (Python)",
+      "integration_branch": "main",
+      "protected_branches": ["main"],
+      "notes": "needs the frappe env (env/frappe); training also needs the card-studio trainer and its backend; no lint rules yet - existing code does not pass ruff",
+      "verify": {
+        "test": "bench --site {site} run-tests --app card_studio",
+        "lint": "",
+        "build": "bench build --app card_studio"
+      }
+    },
+    {
+      "key": "card-studio",
+      "name": "card-studio",
+      "area": "Card OCR",
+      "stack": "Python",
+      "integration_branch": "main",
+      "protected_branches": ["main"],
+      "notes": "no build step; the lint command is the patient-data leak check; trainer used by frappe_card_studio",
+      "verify": {
+        "test": "python -m unittest discover -s studio/tests",
+        "lint": "python tools/leakcheck.py .",
+        "build": ""
+      }
+    },
+    {
+      "key": "telemetry",
+      "name": "frappe_leapwell_telemetry",
+      "area": "Frappe apps",
+      "stack": "Frappe (Python)",
+      "integration_branch": "main",
+      "protected_branches": ["main"],
+      "notes": "needs the frappe env (env/frappe); requires spice_next_core; no lint rules yet - existing code does not pass ruff",
+      "verify": {
+        "test": "bench --site {site} run-tests --app leapwell_telemetry",
+        "lint": "ruff check .",
+        "build": "bench build --app leapwell_telemetry"
+      }
+    },
+    {
+      "key": "uhis",
+      "name": "frappe_uhis",
+      "area": "Frappe apps",
+      "stack": "Frappe (Python)",
+      "lint_rules": [{"files": ["*.py"], "run": "ruff check"}],
+      "integration_branch": "main",
+      "protected_branches": ["main"],
+      "notes": "needs the frappe env (env/frappe); umbrella app, requires spice_next_core, shukhee_integration and leapwell_telemetry",
+      "verify": {
+        "test": "bench --site {site} run-tests --app uhis",
+        "lint": "ruff check .",
+        "build": "bench build --app uhis"
+      }
     }
   ]
 }

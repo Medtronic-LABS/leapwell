@@ -60,6 +60,18 @@
 - name: area:coaching-dashboard
   color: "1D76DB"
   description: "Micro-coaching dashboard (spice-coaching-dashboard-ui)"
+- name: area:card-studio-frappe
+  color: "1D76DB"
+  description: "Card Studio Frappe app (frappe_card_studio)"
+- name: area:card-studio
+  color: "1D76DB"
+  description: "Card Studio trainer and card-pack format (card-studio)"
+- name: area:telemetry
+  color: "1D76DB"
+  description: "AI Scribe telemetry Frappe app (frappe_leapwell_telemetry)"
+- name: area:uhis
+  color: "1D76DB"
+  description: "UHIS umbrella Frappe app: branding, workspaces (frappe_uhis)"
 - name: area:auth
   color: "1D76DB"
   description: "Login, PIN, biometric, session"
